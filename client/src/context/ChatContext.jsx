@@ -8,7 +8,7 @@ export function ChatProvider({ children }) {
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [models, setModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState('gemma3:4b');
+  const [selectedModel, setSelectedModel] = useState('llama-3.3-70b-versatile');
   const [streaming, setStreaming] = useState(false);
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [ollamaOnline, setOllamaOnline] = useState(true);

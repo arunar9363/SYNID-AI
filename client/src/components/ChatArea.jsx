@@ -7,7 +7,7 @@ import { Bot, Zap, Code, MessageSquare, Brain, Layers, FileText, Lightbulb, Glob
 
 const WELCOME_MESSAGES = [
   {
-    tagline: 'Good to see you.',
+    tagline: ' Good to see you.',
     subtitle: 'Ask anything. Think clearly. Build better.',
   },
   {
@@ -201,6 +201,7 @@ function WelcomeScreen() {
       <div className="welcome-icon">
         <Bot size={32} />
       </div>
+      <h2 className="welcome-brand">SYNID AI</h2>
       <h1 className="welcome-title">{randomWelcome.tagline}</h1>
       <p className="welcome-subtitle">{randomWelcome.subtitle}</p>
       <p className="welcome-model">
@@ -222,6 +223,14 @@ function WelcomeScreen() {
       </div>
 
       <style>{`
+              .welcome-brand {
+          font-size: 20px;
+          font-weight: 700;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          color: linear-gradient(135deg, var(--text-primary), var(--accent));
+          margin-bottom: 4px;
+        }
         .welcome {
           display: flex;
           flex-direction: column;

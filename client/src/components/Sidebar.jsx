@@ -17,42 +17,17 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString();
 }
 
-// ── Exact model names from Ollama Cloud API ───────────────────────────────────
 const MODEL_DESCRIPTIONS = {
-  'gemma3:4b': '⚡ Fast · Balanced · Best for beginners',
-  'gemma3:12b': '⚡ Fast · Better quality than 4b',
-  'gemma3:27b': '🔥 Powerful · High quality answers',
-  'ministral-3:3b': '⚡ Fastest model · Simple quick tasks',
-  'ministral-3:8b': '⚡ Fast & smart · Great everyday model',
-  'ministral-3:14b': '⚡ Balanced speed and quality',
-  'qwen3-coder-next': '💻 Best for coding · Fast · Recommended',
-  'qwen3-coder:480b': '💻 Most powerful coding model available',
-  'devstral-2:123b': '💻 Large coding model · Deep code understanding',
-  'devstral-small-2:24b': '💻 Smaller coding model · Faster responses',
-  'kimi-k2-thinking': '🧠 Deep thinking · Best for complex reasoning',
-  'kimi-k2.5': '🧠 Strong reasoning · Good for analysis',
-  'kimi-k2:1t': '🧠 Largest model · Most powerful reasoning',
-  'deepseek-v3.2': '🧠 Excellent reasoning · Great for research',
-  'deepseek-v3.1:671b': '🧠 Very large · Best deep analysis',
-  'qwen3-next:80b': '🧠 Strong reasoning · Multilingual',
-  'gpt-oss:20b': '🔥 Strong general model · Fast responses',
-  'gpt-oss:120b': '🔥 Very powerful · Slower but much better',
-  'cogito-2.1:671b': '🔥 Very large · Deep understanding',
-  'nemotron-3-nano:30b': '🔥 NVIDIA model · High quality',
-  'nemotron-3-super': '🔥 NVIDIA super · Most powerful NVIDIA',
-  'mistral-large-3:675b': '🔥 Largest Mistral · Top tier quality',
-  'minimax-m2': '🖼️ Multimodal · Images + text',
-  'minimax-m2.1': '🖼️ Improved multimodal',
-  'minimax-m2.5': '🖼️ Better multimodal quality',
-  'minimax-m2.7': '🖼️ Latest multimodal · Best vision',
-  'gemini-3-flash-preview': '🖼️ Google model · Fast multimodal',
-  'qwen3-vl:235b': '🌍 Multilingual + vision · Huge model',
-  'qwen3-vl:235b-instruct': '🌍 Instruction tuned multilingual',
-  'qwen3.5:397b': '🌍 Largest multilingual model',
-  'glm-4.6': '🌍 Chinese + English · GLM series',
-  'glm-4.7': '🌍 Improved GLM · Better quality',
-  'glm-5': '🌍 Latest GLM · Best multilingual',
-  'rnj-1:8b': '⚡ Lightweight · Quick responses',
+  'llama-3.3-70b-versatile': '⭐ Best overall · Fast · Recommended',
+  'llama-3.1-8b-instant': '⚡ Fastest model · Simple tasks',
+  'llama3-70b-8192': '🔥 Powerful · Long context',
+  'llama3-8b-8192': '⚡ Fast & smart · Everyday use',
+  'gemma2-9b-it': '⚡ Google model · Balanced',
+  'mixtral-8x7b-32768': '🧠 Great reasoning · Long context',
+  'deepseek-r1-distill-llama-70b': '🧠 Deep thinking · Best reasoning',
+  'qwen-qwq-32b': '🧠 Strong reasoning · Analysis',
+  'meta-llama/llama-4-scout-17b-16e-instruct': '🔥 Llama 4 · Fast multimodal',
+  'meta-llama/llama-4-maverick-17b-128e-instruct': '🔥 Llama 4 · Best quality',
 };
 
 const KNOWN_MODELS = Object.keys(MODEL_DESCRIPTIONS);
@@ -149,74 +124,31 @@ export default function Sidebar() {
                 value={selectedModel}
                 onChange={e => setSelectedModel(e.target.value)}
               >
-                {/* ── Recommended ── */}
                 <optgroup label="⭐ Recommended">
-                  <option value="gemma3:4b">gemma3:4b — Fast & General</option>
-                  <option value="deepseek-v3.2">deepseek-v3.2 — Best Reasoning</option>
-                  <option value="qwen3-coder-next">qwen3-coder-next — Best Coding</option>
-                  <option value="ministral-3:8b">ministral-3:8b — Fast & Smart</option>
-                  <option value="kimi-k2-thinking">kimi-k2-thinking — Deep Thinking</option>
+                  <option value="llama-3.3-70b-versatile">llama-3.3-70b — Best Overall</option>
+                  <option value="deepseek-r1-distill-llama-70b">deepseek-r1 — Best Reasoning</option>
+                  <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick — Latest</option>
                 </optgroup>
 
-                {/* ── Fast & Light ── */}
                 <optgroup label="⚡ Fast & Light">
-                  <option value="ministral-3:3b">ministral-3:3b — Fastest</option>
-                  <option value="ministral-3:8b">ministral-3:8b</option>
-                  <option value="ministral-3:14b">ministral-3:14b</option>
-                  <option value="gemma3:4b">gemma3:4b</option>
-                  <option value="gemma3:12b">gemma3:12b</option>
-                  <option value="rnj-1:8b">rnj-1:8b</option>
-                  <option value="gpt-oss:20b">gpt-oss:20b</option>
+                  <option value="llama-3.1-8b-instant">llama-3.1-8b — Fastest</option>
+                  <option value="llama3-8b-8192">llama3-8b — Fast</option>
+                  <option value="gemma2-9b-it">gemma2-9b — Balanced</option>
+                  <option value="meta-llama/llama-4-scout-17b-16e-instruct">llama-4-scout — Fast Multimodal</option>
                 </optgroup>
 
-                {/* ── Coding ── */}
-                <optgroup label="💻 Coding">
-                  <option value="qwen3-coder-next">qwen3-coder-next — Recommended</option>
-                  <option value="devstral-small-2:24b">devstral-small-2:24b — Fast</option>
-                  <option value="devstral-2:123b">devstral-2:123b — Powerful</option>
-                  <option value="qwen3-coder:480b">qwen3-coder:480b — Most Powerful</option>
-                </optgroup>
-
-                {/* ── Reasoning & Analysis ── */}
                 <optgroup label="🧠 Reasoning & Analysis">
-                  <option value="deepseek-v3.2">deepseek-v3.2 — Recommended</option>
-                  <option value="kimi-k2-thinking">kimi-k2-thinking — Deep Thinking</option>
-                  <option value="kimi-k2.5">kimi-k2.5</option>
-                  <option value="qwen3-next:80b">qwen3-next:80b</option>
-                  <option value="deepseek-v3.1:671b">deepseek-v3.1:671b — Largest</option>
-                  <option value="kimi-k2:1t">kimi-k2:1t — Most Powerful</option>
+                  <option value="deepseek-r1-distill-llama-70b">deepseek-r1 — Deep Thinking</option>
+                  <option value="qwen-qwq-32b">qwen-qwq-32b — Strong Reasoning</option>
+                  <option value="mixtral-8x7b-32768">mixtral-8x7b — Long Context</option>
                 </optgroup>
 
-                {/* ── Large & Powerful ── */}
                 <optgroup label="🔥 Large & Powerful">
-                  <option value="gpt-oss:120b">gpt-oss:120b</option>
-                  <option value="gemma3:27b">gemma3:27b</option>
-                  <option value="cogito-2.1:671b">cogito-2.1:671b</option>
-                  <option value="nemotron-3-nano:30b">nemotron-3-nano:30b</option>
-                  <option value="nemotron-3-super">nemotron-3-super</option>
-                  <option value="mistral-large-3:675b">mistral-large-3:675b</option>
+                  <option value="llama-3.3-70b-versatile">llama-3.3-70b</option>
+                  <option value="llama3-70b-8192">llama3-70b — Long Context</option>
+                  <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick</option>
                 </optgroup>
 
-                {/* ── Multimodal & Vision ── */}
-                <optgroup label="🖼️ Multimodal & Vision">
-                  <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
-                  <option value="minimax-m2">minimax-m2</option>
-                  <option value="minimax-m2.1">minimax-m2.1</option>
-                  <option value="minimax-m2.5">minimax-m2.5</option>
-                  <option value="minimax-m2.7">minimax-m2.7 — Latest</option>
-                </optgroup>
-
-                {/* ── Multilingual ── */}
-                <optgroup label="🌍 Multilingual">
-                  <option value="glm-4.6">glm-4.6</option>
-                  <option value="glm-4.7">glm-4.7</option>
-                  <option value="glm-5">glm-5 — Latest</option>
-                  <option value="qwen3.5:397b">qwen3.5:397b — Largest</option>
-                  <option value="qwen3-vl:235b-instruct">qwen3-vl:235b-instruct</option>
-                  <option value="qwen3-vl:235b">qwen3-vl:235b</option>
-                </optgroup>
-
-                {/* ── Extra models from API not in above list ── */}
                 {extraModels.length > 0 && (
                   <optgroup label="🆕 Other Available">
                     {extraModels.map(m => (
@@ -226,7 +158,6 @@ export default function Sidebar() {
                 )}
               </select>
 
-              {/* Smart description badge */}
               {MODEL_DESCRIPTIONS[selectedModel] && (
                 <div className="model-desc">
                   {MODEL_DESCRIPTIONS[selectedModel]}
@@ -334,7 +265,7 @@ export default function Sidebar() {
           transition: all var(--transition);
         }
         .new-chat-btn:hover {
-          background: rgba(124,106,247,0.2);
+          background: rgba(227,106,106,0.2);
           border-color: var(--accent);
           transform: translateY(-1px);
         }
@@ -370,6 +301,7 @@ export default function Sidebar() {
           background: var(--bg-elevated);
           color: var(--text-primary);
           padding: 4px;
+          white-space: normal;
         }
         .model-desc {
           font-size: 11px;
@@ -463,11 +395,6 @@ export default function Sidebar() {
           transition: all var(--transition);
         }
         .icon-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
-        /* Model select option fix */
-.model-select option {
-  white-space: normal;  /* add this */
-  word-wrap: break-word;
-}
       `}</style>
     </>
   );

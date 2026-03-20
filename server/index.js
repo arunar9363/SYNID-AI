@@ -4,42 +4,60 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { Conversation, Persona } from './models.js';
 
-// ── dotenv SABSE PEHLE load karo ─────────────────────────────────────────────
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── Ollama Config ─────────────────────────────────────────────────────────────
-const OLLAMA = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_KEY = process.env.OLLAMA_API_KEY || '';
+// ── Groq Config ───────────────────────────────────────────────────────────────
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
-// ── Helper: Local aur Cloud dono ke liye headers ──────────────────────────────
-const ollamaHeaders = () => ({
-  'Content-Type': 'application/json',
-  ...(OLLAMA_KEY ? { 'Authorization': `Bearer ${OLLAMA_KEY}` } : {}),
-});
+// ── Available Groq Models ─────────────────────────────────────────────────────
+const GROQ_MODELS = [
+  { name: 'llama-3.3-70b-versatile' },
+  { name: 'llama-3.1-8b-instant' },
+  { name: 'llama3-70b-8192' },
+  { name: 'llama3-8b-8192' },
+  { name: 'gemma2-9b-it' },
+  { name: 'mixtral-8x7b-32768' },
+  { name: 'deepseek-r1-distill-llama-70b' },
+  { name: 'qwen-qwq-32b' },
+  { name: 'meta-llama/llama-4-scout-17b-16e-instruct' },
+  { name: 'meta-llama/llama-4-maverick-17b-128e-instruct' },
+];
+
+const DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'llama-3.3-70b-versatile';
 
 // ── MongoDB ───────────────────────────────────────────────────────────────────
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err));
 
-// ── Helper: auto-generate title from first message ────────────────────────────
-async function generateTitle(content, model) {
+// ── Helper: auto-generate title ───────────────────────────────────────────────
+async function generateTitle(content) {
   try {
-    const res = await fetch(`${OLLAMA}/api/generate`, {
+    const res = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
       method: 'POST',
-      headers: ollamaHeaders(),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
       body: JSON.stringify({
-        model,
-        prompt: `Generate a short 4-6 word title for a chat that starts with: "${content.slice(0, 200)}". Reply with ONLY the title, no quotes, no punctuation at end.`,
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          {
+            role: 'user',
+            content: `Generate a short 4-6 word title for a chat that starts with: "${content.slice(0, 200)}". Reply with ONLY the title, no quotes, no punctuation at end.`
+          }
+        ],
+        max_tokens: 20,
         stream: false,
       }),
     });
     const data = await res.json();
-    return data.response?.trim() || 'New Chat';
+    return data.choices?.[0]?.message?.content?.trim() || 'New Chat';
   } catch {
     return 'New Chat';
   }
@@ -48,13 +66,10 @@ async function generateTitle(content, model) {
 // ── GET /api/models ───────────────────────────────────────────────────────────
 app.get('/api/models', async (req, res) => {
   try {
-    const response = await fetch(`${OLLAMA}/api/tags`, {
-      headers: ollamaHeaders(),
-    });
-    const data = await response.json();
-    res.json(data.models || []);
+    // Groq ke available models return karo
+    res.json(GROQ_MODELS);
   } catch (err) {
-    res.status(500).json({ error: 'SYNID is not reachable. Check OLLAMA_BASE_URL and OLLAMA_API_KEY in .env' });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -84,7 +99,7 @@ app.get('/api/conversations/:id', async (req, res) => {
 // ── POST /api/conversations ───────────────────────────────────────────────────
 app.post('/api/conversations', async (req, res) => {
   try {
-    const convo = new Conversation({ model: req.body.model || process.env.DEFAULT_MODEL });
+    const convo = new Conversation({ model: req.body.model || DEFAULT_MODEL });
     await convo.save();
     res.json(convo);
   } catch (err) {
@@ -122,9 +137,9 @@ app.delete('/api/conversations', async (req, res) => {
   }
 });
 
-// ── POST /api/chat (STREAMING) ────────────────────────────────────────────────
+// ── POST /api/chat (STREAMING with Groq) ─────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
-  const { conversationId, message, model, images = [] } = req.body;
+  const { conversationId, message, model, systemPrompt } = req.body;
 
   if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
 
@@ -143,41 +158,44 @@ app.post('/api/chat', async (req, res) => {
       : null;
 
     if (!convo) {
-      convo = new Conversation({ model: model || process.env.DEFAULT_MODEL });
+      convo = new Conversation({ model: model || DEFAULT_MODEL });
     }
 
-    const activeModel = model || convo.model || process.env.DEFAULT_MODEL;
+    const activeModel = model || convo.model || DEFAULT_MODEL;
+    const activeSystemPrompt = systemPrompt ?? convo.systemPrompt ?? '';
 
     // Add user message
     convo.messages.push({ role: 'user', content: message });
     send({ type: 'conversation_id', id: convo._id.toString() });
 
-    // Build messages array for Ollama — prepend system prompt if set
-    const systemPrompt = req.body.systemPrompt ?? convo.systemPrompt ?? '';
-    const ollamaMessages = [
-      ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+    // Build messages for Groq
+    const groqMessages = [
+      ...(activeSystemPrompt ? [{ role: 'system', content: activeSystemPrompt }] : []),
       ...convo.messages.map(m => ({ role: m.role, content: m.content })),
     ];
 
-    // For multimodal models (llava etc), attach images to last user message
-    if (images.length > 0 && ollamaMessages.length > 0) {
-      const last = ollamaMessages[ollamaMessages.length - 1];
-      if (last.role === 'user') last.images = images;
-    }
-
-    // ── Stream from Ollama (Local or Cloud) ───────────────────────────────────
-    const ollamaRes = await fetch(`${OLLAMA}/api/chat`, {
+    // ── Stream from Groq ──────────────────────────────────────────────────────
+    const groqRes = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
       method: 'POST',
-      headers: ollamaHeaders(),
-      body: JSON.stringify({ model: activeModel, messages: ollamaMessages, stream: true }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: activeModel,
+        messages: groqMessages,
+        stream: true,
+        max_tokens: 8192,
+      }),
     });
 
-    if (!ollamaRes.ok) {
-      throw new Error(`Ollama error: ${ollamaRes.statusText}`);
+    if (!groqRes.ok) {
+      const errData = await groqRes.json();
+      throw new Error(errData.error?.message || groqRes.statusText);
     }
 
     let fullResponse = '';
-    const reader = ollamaRes.body.getReader();
+    const reader = groqRes.body.getReader();
     const decoder = new TextDecoder();
 
     while (true) {
@@ -185,17 +203,19 @@ app.post('/api/chat', async (req, res) => {
       if (done) break;
 
       const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n').filter(l => l.trim());
+      const lines = chunk.split('\n').filter(l => l.trim() && l !== 'data: [DONE]');
 
       for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
         try {
-          const json = JSON.parse(line);
-          if (json.message?.content) {
-            fullResponse += json.message.content;
-            send({ type: 'chunk', content: json.message.content });
+          const json = JSON.parse(line.slice(6));
+          const content = json.choices?.[0]?.delta?.content;
+          if (content) {
+            fullResponse += content;
+            send({ type: 'chunk', content });
           }
-          if (json.done) {
-            send({ type: 'done', eval_count: json.eval_count });
+          if (json.choices?.[0]?.finish_reason === 'stop') {
+            send({ type: 'done' });
           }
         } catch { /* skip malformed lines */ }
       }
@@ -205,11 +225,11 @@ app.post('/api/chat', async (req, res) => {
     convo.messages.push({ role: 'assistant', content: fullResponse });
 
     // Update system prompt if provided
-    if (req.body.systemPrompt !== undefined) convo.systemPrompt = req.body.systemPrompt;
+    if (systemPrompt !== undefined) convo.systemPrompt = systemPrompt;
 
     // Auto-generate title from first exchange
     if (convo.messages.length === 2) {
-      convo.title = await generateTitle(message, activeModel);
+      convo.title = await generateTitle(message);
     }
 
     convo.model = activeModel;
@@ -256,7 +276,6 @@ app.get('/api/conversations/:id/export', async (req, res) => {
       return res.json(convo);
     }
 
-    // Markdown export
     let md = `# ${convo.title}\n\n`;
     md += `**Model:** ${convo.model}  \n`;
     md += `**Date:** ${new Date(convo.createdAt).toLocaleString()}  \n\n---\n\n`;
@@ -331,6 +350,7 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
   });
 }
+
 // ── Start Server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
