@@ -12,8 +12,7 @@ export function ChatProvider({ children }) {
   const [streaming, setStreaming] = useState(false);
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [ollamaOnline, setOllamaOnline] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 640);
   useEffect(() => {
     api.getModels()
       .then(m => { setModels(m); setOllamaOnline(true); })

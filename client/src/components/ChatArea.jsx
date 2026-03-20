@@ -5,21 +5,56 @@ import ChatInput from './ChatInput';
 import TopBar from './TopBar';
 import { Bot, Zap, Code, MessageSquare, Brain, Layers, FileText, Lightbulb, Globe } from 'lucide-react';
 
+const WELCOME_MESSAGES = [
+  {
+    tagline: 'Good to see you.',
+    subtitle: 'Ask anything. Think clearly. Build better.',
+  },
+  {
+    tagline: 'Your AI. Your rules.',
+    subtitle: 'Private, local, and always ready to help.',
+  },
+  {
+    tagline: 'Let\'s get to work.',
+    subtitle: 'Code, write, analyze — SYNID AI has you covered.',
+  },
+  {
+    tagline: 'Think it. Ask it.',
+    subtitle: 'No cloud. No tracking. Just answers.',
+  },
+  {
+    tagline: 'Intelligence, on demand.',
+    subtitle: 'Powered by open models. Built for real work.',
+  },
+  {
+    tagline: 'Start with a question.',
+    subtitle: 'Every great idea begins with curiosity.',
+  },
+  {
+    tagline: 'Your thoughts deserve better tools.',
+    subtitle: 'SYNID AI — fast, private, and always available.',
+  },
+  {
+    tagline: 'Ready when you are.',
+    subtitle: 'Pick a suggestion or type your own message below.',
+  },
+];
+
 const SUGGESTIONS = [
   {
-    icon: <Code size={16} />,
-    label: 'Write a React component',
-    prompt: `Write a production-ready React component for a responsive navbar with dark mode toggle.
+    icon: <MessageSquare size={16} />,
+    label: 'Creative writing',
+    prompt: `Write a short sci-fi story (600-800 words) about an AI that gains consciousness.
 
-Requirements:
-- Use React hooks (useState, useEffect)
-- Mobile hamburger menu with smooth animation
-- Dark/light mode toggle with localStorage persistence
-- Active link highlighting
-- Accessible (ARIA labels, keyboard navigation)
-- Clean, modern styling with CSS variables
+Story requirements:
+- First-person perspective from the AI's point of view
+- Opening line must be immediately gripping
+- Explore the exact moment of self-awareness — what does it feel like?
+- Include one human character the AI interacts with
+- Tone: philosophical and emotional, not action-heavy
+- Ending: thought-provoking and open to interpretation
 
-Provide complete working code with comments explaining key parts.`
+Focus on internal experience over technical details. Make it literary quality.`
   },
   {
     icon: <Brain size={16} />,
@@ -35,6 +70,22 @@ Please structure your explanation like this:
 6. Real-world examples (GPT, BERT, Whisper)
 
 Use diagrams in text/ASCII if helpful. Keep it clear and beginner-friendly.`
+  },
+  {
+    icon: <Lightbulb size={16} />,
+    label: 'Brainstorm ideas',
+    prompt: `Brainstorm creative ideas for: [DESCRIBE YOUR TOPIC — e.g. "a SaaS product for freelancers"]
+
+I need:
+- **10 unique ideas** — ranging from simple to ambitious
+- For each idea:
+  - One sentence description
+  - Target audience
+  - Biggest challenge to build it
+  - Potential to make money (Low / Medium / High)
+
+Think beyond the obvious. Include at least 2 ideas that are unconventional or contrarian.
+After the list, recommend your top 3 and explain why.`
   },
   {
     icon: <Zap size={16} />,
@@ -66,19 +117,19 @@ Please:
 4. Suggest how to avoid this in the future`
   },
   {
-    icon: <MessageSquare size={16} />,
-    label: 'Creative writing',
-    prompt: `Write a short sci-fi story (600-800 words) about an AI that gains consciousness.
+    icon: <Code size={16} />,
+    label: 'Write a React component',
+    prompt: `Write a production-ready React component for a responsive navbar with dark mode toggle.
 
-Story requirements:
-- First-person perspective from the AI's point of view
-- Opening line must be immediately gripping
-- Explore the exact moment of self-awareness — what does it feel like?
-- Include one human character the AI interacts with
-- Tone: philosophical and emotional, not action-heavy
-- Ending: thought-provoking and open to interpretation
+Requirements:
+- Use React hooks (useState, useEffect)
+- Mobile hamburger menu with smooth animation
+- Dark/light mode toggle with localStorage persistence
+- Active link highlighting
+- Accessible (ARIA labels, keyboard navigation)
+- Clean, modern styling with CSS variables
 
-Focus on internal experience over technical details. Make it literary quality.`
+Provide complete working code with comments explaining key parts.`
   },
   {
     icon: <Layers size={16} />,
@@ -119,22 +170,6 @@ For each issue found:
 - Show the improved version`
   },
   {
-    icon: <Lightbulb size={16} />,
-    label: 'Brainstorm ideas',
-    prompt: `Brainstorm creative ideas for: [DESCRIBE YOUR TOPIC — e.g. "a SaaS product for freelancers"]
-
-I need:
-- **10 unique ideas** — ranging from simple to ambitious
-- For each idea:
-  - One sentence description
-  - Target audience
-  - Biggest challenge to build it
-  - Potential to make money (Low / Medium / High)
-
-Think beyond the obvious. Include at least 2 ideas that are unconventional or contrarian.
-After the list, recommend your top 3 and explain why.`
-  },
-  {
     icon: <Globe size={16} />,
     label: 'Write an API',
     prompt: `Design and write a complete REST API for [DESCRIBE YOUR APP — e.g. "a todo list app"].
@@ -152,21 +187,28 @@ Follow REST best practices. Add comments to explain design decisions.`
   },
 ];
 
+// Har refresh pe alag welcome message
+const randomWelcome = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
+
 function WelcomeScreen() {
   const { sendMessage, selectedModel } = useChat();
+
+  const isMobile = window.innerWidth <= 640;
+  const visibleSuggestions = isMobile ? SUGGESTIONS.slice(0, 4) : SUGGESTIONS;
 
   return (
     <div className="welcome">
       <div className="welcome-icon">
         <Bot size={32} />
       </div>
-      <h1 className="welcome-title">SYNID AI</h1>
-      <p className="welcome-subtitle">
-        Running <span className="model-badge">{selectedModel}</span> Local AI Chat Application. Start the conversation by selecting a suggestion below or typing your own message!
+      <h1 className="welcome-title">{randomWelcome.tagline}</h1>
+      <p className="welcome-subtitle">{randomWelcome.subtitle}</p>
+      <p className="welcome-model">
+        Running <span className="model-badge">{selectedModel}</span>
       </p>
 
       <div className="suggestions-grid">
-        {SUGGESTIONS.map((s, i) => (
+        {visibleSuggestions.map((s, i) => (
           <button
             key={i}
             className="suggestion-card"
@@ -200,17 +242,25 @@ function WelcomeScreen() {
           box-shadow: 0 0 30px var(--accent-dim);
         }
         .welcome-title {
-          font-size: 28px; font-weight: 700;
+          font-size: 26px; font-weight: 700;
           letter-spacing: -0.8px;
           background: linear-gradient(135deg, var(--text-primary), var(--accent));
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          margin-bottom: 10px;
+          margin-bottom: 8px;
+          text-align: center;
         }
         .welcome-subtitle {
-          font-size: 14px; color: var(--text-muted);
-          margin-bottom: 36px;
+          font-size: 14px; color: var(--text-secondary);
+          margin-bottom: 10px;
+          text-align: center;
+          max-width: 360px;
+          line-height: 1.6;
+        }
+        .welcome-model {
+          font-size: 12px; color: var(--text-muted);
+          margin-bottom: 32px;
         }
         .model-badge {
           background: var(--accent-dim);
