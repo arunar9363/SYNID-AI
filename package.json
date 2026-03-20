@@ -1,0 +1,9 @@
+{
+  "name": "synid-ai",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && npm start",
+    "install-all": "cd server && npm install && cd ../client && npm install"
+  }
+}

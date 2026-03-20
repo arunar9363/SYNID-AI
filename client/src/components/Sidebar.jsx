@@ -17,6 +17,46 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString();
 }
 
+// ── Exact model names from Ollama Cloud API ───────────────────────────────────
+const MODEL_DESCRIPTIONS = {
+  'gemma3:4b': '⚡ Fast · Balanced · Best for beginners',
+  'gemma3:12b': '⚡ Fast · Better quality than 4b',
+  'gemma3:27b': '🔥 Powerful · High quality answers',
+  'ministral-3:3b': '⚡ Fastest model · Simple quick tasks',
+  'ministral-3:8b': '⚡ Fast & smart · Great everyday model',
+  'ministral-3:14b': '⚡ Balanced speed and quality',
+  'qwen3-coder-next': '💻 Best for coding · Fast · Recommended',
+  'qwen3-coder:480b': '💻 Most powerful coding model available',
+  'devstral-2:123b': '💻 Large coding model · Deep code understanding',
+  'devstral-small-2:24b': '💻 Smaller coding model · Faster responses',
+  'kimi-k2-thinking': '🧠 Deep thinking · Best for complex reasoning',
+  'kimi-k2.5': '🧠 Strong reasoning · Good for analysis',
+  'kimi-k2:1t': '🧠 Largest model · Most powerful reasoning',
+  'deepseek-v3.2': '🧠 Excellent reasoning · Great for research',
+  'deepseek-v3.1:671b': '🧠 Very large · Best deep analysis',
+  'qwen3-next:80b': '🧠 Strong reasoning · Multilingual',
+  'gpt-oss:20b': '🔥 Strong general model · Fast responses',
+  'gpt-oss:120b': '🔥 Very powerful · Slower but much better',
+  'cogito-2.1:671b': '🔥 Very large · Deep understanding',
+  'nemotron-3-nano:30b': '🔥 NVIDIA model · High quality',
+  'nemotron-3-super': '🔥 NVIDIA super · Most powerful NVIDIA',
+  'mistral-large-3:675b': '🔥 Largest Mistral · Top tier quality',
+  'minimax-m2': '🖼️ Multimodal · Images + text',
+  'minimax-m2.1': '🖼️ Improved multimodal',
+  'minimax-m2.5': '🖼️ Better multimodal quality',
+  'minimax-m2.7': '🖼️ Latest multimodal · Best vision',
+  'gemini-3-flash-preview': '🖼️ Google model · Fast multimodal',
+  'qwen3-vl:235b': '🌍 Multilingual + vision · Huge model',
+  'qwen3-vl:235b-instruct': '🌍 Instruction tuned multilingual',
+  'qwen3.5:397b': '🌍 Largest multilingual model',
+  'glm-4.6': '🌍 Chinese + English · GLM series',
+  'glm-4.7': '🌍 Improved GLM · Better quality',
+  'glm-5': '🌍 Latest GLM · Best multilingual',
+  'rnj-1:8b': '⚡ Lightweight · Quick responses',
+};
+
+const KNOWN_MODELS = Object.keys(MODEL_DESCRIPTIONS);
+
 function ConvoItem({ convo, active, onSelect, onDelete, onRename }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(convo.title);
@@ -76,6 +116,8 @@ export default function Sidebar() {
     newChat, selectConversation, deleteConversation, renameConversation, clearAll,
   } = useChat();
 
+  const extraModels = models.filter(m => !KNOWN_MODELS.includes(m.name));
+
   return (
     <>
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
@@ -101,16 +143,96 @@ export default function Sidebar() {
         <div className="model-section">
           <div className="section-label"><Cpu size={11} />Model</div>
           {ollamaOnline ? (
-            <select
-              className="model-select"
-              value={selectedModel}
-              onChange={e => setSelectedModel(e.target.value)}
-            >
-              {models.length === 0 && <option value="llama3.2">llama3.2</option>}
-              {models.map(m => (
-                <option key={m.name} value={m.name}>{m.name}</option>
-              ))}
-            </select>
+            <div className="model-select-wrapper">
+              <select
+                className="model-select"
+                value={selectedModel}
+                onChange={e => setSelectedModel(e.target.value)}
+              >
+                {/* ── Recommended ── */}
+                <optgroup label="⭐ Recommended">
+                  <option value="gemma3:4b">gemma3:4b — Fast & General</option>
+                  <option value="deepseek-v3.2">deepseek-v3.2 — Best Reasoning</option>
+                  <option value="qwen3-coder-next">qwen3-coder-next — Best Coding</option>
+                  <option value="ministral-3:8b">ministral-3:8b — Fast & Smart</option>
+                  <option value="kimi-k2-thinking">kimi-k2-thinking — Deep Thinking</option>
+                </optgroup>
+
+                {/* ── Fast & Light ── */}
+                <optgroup label="⚡ Fast & Light">
+                  <option value="ministral-3:3b">ministral-3:3b — Fastest</option>
+                  <option value="ministral-3:8b">ministral-3:8b</option>
+                  <option value="ministral-3:14b">ministral-3:14b</option>
+                  <option value="gemma3:4b">gemma3:4b</option>
+                  <option value="gemma3:12b">gemma3:12b</option>
+                  <option value="rnj-1:8b">rnj-1:8b</option>
+                  <option value="gpt-oss:20b">gpt-oss:20b</option>
+                </optgroup>
+
+                {/* ── Coding ── */}
+                <optgroup label="💻 Coding">
+                  <option value="qwen3-coder-next">qwen3-coder-next — Recommended</option>
+                  <option value="devstral-small-2:24b">devstral-small-2:24b — Fast</option>
+                  <option value="devstral-2:123b">devstral-2:123b — Powerful</option>
+                  <option value="qwen3-coder:480b">qwen3-coder:480b — Most Powerful</option>
+                </optgroup>
+
+                {/* ── Reasoning & Analysis ── */}
+                <optgroup label="🧠 Reasoning & Analysis">
+                  <option value="deepseek-v3.2">deepseek-v3.2 — Recommended</option>
+                  <option value="kimi-k2-thinking">kimi-k2-thinking — Deep Thinking</option>
+                  <option value="kimi-k2.5">kimi-k2.5</option>
+                  <option value="qwen3-next:80b">qwen3-next:80b</option>
+                  <option value="deepseek-v3.1:671b">deepseek-v3.1:671b — Largest</option>
+                  <option value="kimi-k2:1t">kimi-k2:1t — Most Powerful</option>
+                </optgroup>
+
+                {/* ── Large & Powerful ── */}
+                <optgroup label="🔥 Large & Powerful">
+                  <option value="gpt-oss:120b">gpt-oss:120b</option>
+                  <option value="gemma3:27b">gemma3:27b</option>
+                  <option value="cogito-2.1:671b">cogito-2.1:671b</option>
+                  <option value="nemotron-3-nano:30b">nemotron-3-nano:30b</option>
+                  <option value="nemotron-3-super">nemotron-3-super</option>
+                  <option value="mistral-large-3:675b">mistral-large-3:675b</option>
+                </optgroup>
+
+                {/* ── Multimodal & Vision ── */}
+                <optgroup label="🖼️ Multimodal & Vision">
+                  <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
+                  <option value="minimax-m2">minimax-m2</option>
+                  <option value="minimax-m2.1">minimax-m2.1</option>
+                  <option value="minimax-m2.5">minimax-m2.5</option>
+                  <option value="minimax-m2.7">minimax-m2.7 — Latest</option>
+                </optgroup>
+
+                {/* ── Multilingual ── */}
+                <optgroup label="🌍 Multilingual">
+                  <option value="glm-4.6">glm-4.6</option>
+                  <option value="glm-4.7">glm-4.7</option>
+                  <option value="glm-5">glm-5 — Latest</option>
+                  <option value="qwen3.5:397b">qwen3.5:397b — Largest</option>
+                  <option value="qwen3-vl:235b-instruct">qwen3-vl:235b-instruct</option>
+                  <option value="qwen3-vl:235b">qwen3-vl:235b</option>
+                </optgroup>
+
+                {/* ── Extra models from API not in above list ── */}
+                {extraModels.length > 0 && (
+                  <optgroup label="🆕 Other Available">
+                    {extraModels.map(m => (
+                      <option key={m.name} value={m.name}>{m.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+
+              {/* Smart description badge */}
+              {MODEL_DESCRIPTIONS[selectedModel] && (
+                <div className="model-desc">
+                  {MODEL_DESCRIPTIONS[selectedModel]}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="offline-badge">
               <AlertCircle size={12} />
@@ -179,7 +301,6 @@ export default function Sidebar() {
           flex-shrink: 0;
         }
         .sidebar.closed { width: 0; opacity: 0; pointer-events: none; }
-
         .sidebar-header {
           display: flex;
           align-items: center;
@@ -196,7 +317,6 @@ export default function Sidebar() {
           color: var(--accent);
         }
         .brand-name { font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
-
         .new-chat-btn {
           margin: 12px 10px 4px;
           padding: 9px 14px;
@@ -225,7 +345,6 @@ export default function Sidebar() {
           border-radius: 4px; padding: 1px 5px;
           font-family: var(--font-mono);
         }
-
         .model-section { padding: 12px 12px 0; }
         .section-label {
           display: flex; align-items: center; gap: 5px;
@@ -233,6 +352,7 @@ export default function Sidebar() {
           text-transform: uppercase; color: var(--text-muted);
           margin-bottom: 6px;
         }
+        .model-select-wrapper { display: flex; flex-direction: column; gap: 6px; }
         .model-select {
           width: 100%; padding: 7px 10px;
           background: var(--bg-elevated);
@@ -246,6 +366,21 @@ export default function Sidebar() {
           transition: border-color var(--transition);
         }
         .model-select:hover { border-color: var(--accent); }
+        .model-select option {
+          background: var(--bg-elevated);
+          color: var(--text-primary);
+          padding: 4px;
+        }
+        .model-desc {
+          font-size: 11px;
+          color: var(--accent);
+          background: var(--accent-dim);
+          border: 1px solid var(--accent-glow);
+          border-radius: 6px;
+          padding: 5px 9px;
+          line-height: 1.5;
+          animation: fadeIn 0.2s ease;
+        }
         .offline-badge {
           display: flex; align-items: center; gap: 6px;
           padding: 7px 10px;
@@ -255,7 +390,6 @@ export default function Sidebar() {
           color: var(--danger);
           font-size: 12px;
         }
-
         .convo-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
         .convo-item {
           display: flex; align-items: center; gap: 8px;
@@ -274,9 +408,7 @@ export default function Sidebar() {
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .convo-item.active .convo-title { color: var(--text-primary); }
-        .convo-actions {
-          display: flex; gap: 2px; flex-shrink: 0;
-        }
+        .convo-actions { display: flex; gap: 2px; flex-shrink: 0; }
         .convo-actions button {
           background: none; border: none; cursor: pointer;
           color: var(--text-muted); padding: 3px;
@@ -313,7 +445,6 @@ export default function Sidebar() {
           border-radius: 6px; transition: all var(--transition); width: 100%;
         }
         .clear-btn:hover { color: var(--danger); background: rgba(248,113,113,0.08); }
-
         .sidebar-toggle-btn {
           position: fixed; top: 14px; left: 14px; z-index: 50;
           width: 38px; height: 38px;
@@ -325,7 +456,6 @@ export default function Sidebar() {
           transition: all var(--transition);
         }
         .sidebar-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
-
         .icon-btn {
           background: none; border: none; cursor: pointer;
           color: var(--text-muted); padding: 5px;

@@ -74,20 +74,6 @@ No API keys. No subscriptions. No data leaves your machine. Ever.
 
 ---
 
-## 🖥️ Screenshots
-
-> Add your screenshots here after running the project
-
-```
-client/screenshots/
-├── chat.png          ← Main chat interface
-├── sidebar.png       ← Conversation history
-├── settings.png      ← Personas & system prompt
-└── templates.png     ← Prompt templates
-```
-
----
-
 ## 🛠️ Tech Stack
 
 | Layer | Technology | Why |

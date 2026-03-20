@@ -4,25 +4,34 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { Conversation, Persona } from './models.js';
 
+// ── dotenv SABSE PEHLE load karo ─────────────────────────────────────────────
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── MongoDB ──────────────────────────────────────────────────────────────────
+// ── Ollama Config ─────────────────────────────────────────────────────────────
+const OLLAMA = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_KEY = process.env.OLLAMA_API_KEY || '';
+
+// ── Helper: Local aur Cloud dono ke liye headers ──────────────────────────────
+const ollamaHeaders = () => ({
+  'Content-Type': 'application/json',
+  ...(OLLAMA_KEY ? { 'Authorization': `Bearer ${OLLAMA_KEY}` } : {}),
+});
+
+// ── MongoDB ───────────────────────────────────────────────────────────────────
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err));
 
-const OLLAMA = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-
-// ── Helper: auto-generate title from first message ──────────────────────────
+// ── Helper: auto-generate title from first message ────────────────────────────
 async function generateTitle(content, model) {
   try {
     const res = await fetch(`${OLLAMA}/api/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders(),
       body: JSON.stringify({
         model,
         prompt: `Generate a short 4-6 word title for a chat that starts with: "${content.slice(0, 200)}". Reply with ONLY the title, no quotes, no punctuation at end.`,
@@ -36,18 +45,20 @@ async function generateTitle(content, model) {
   }
 }
 
-// ── GET /api/models ──────────────────────────────────────────────────────────
+// ── GET /api/models ───────────────────────────────────────────────────────────
 app.get('/api/models', async (req, res) => {
   try {
-    const response = await fetch(`${OLLAMA}/api/tags`);
+    const response = await fetch(`${OLLAMA}/api/tags`, {
+      headers: ollamaHeaders(),
+    });
     const data = await response.json();
     res.json(data.models || []);
   } catch (err) {
-    res.status(500).json({ error: 'Ollama not running. Start with: ollama serve' });
+    res.status(500).json({ error: 'SYNID is not reachable. Check OLLAMA_BASE_URL and OLLAMA_API_KEY in .env' });
   }
 });
 
-// ── GET /api/conversations ───────────────────────────────────────────────────
+// ── GET /api/conversations ────────────────────────────────────────────────────
 app.get('/api/conversations', async (req, res) => {
   try {
     const convos = await Conversation.find({}, '-messages')
@@ -59,7 +70,7 @@ app.get('/api/conversations', async (req, res) => {
   }
 });
 
-// ── GET /api/conversations/:id ───────────────────────────────────────────────
+// ── GET /api/conversations/:id ────────────────────────────────────────────────
 app.get('/api/conversations/:id', async (req, res) => {
   try {
     const convo = await Conversation.findById(req.params.id);
@@ -70,7 +81,7 @@ app.get('/api/conversations/:id', async (req, res) => {
   }
 });
 
-// ── POST /api/conversations ──────────────────────────────────────────────────
+// ── POST /api/conversations ───────────────────────────────────────────────────
 app.post('/api/conversations', async (req, res) => {
   try {
     const convo = new Conversation({ model: req.body.model || process.env.DEFAULT_MODEL });
@@ -81,7 +92,7 @@ app.post('/api/conversations', async (req, res) => {
   }
 });
 
-// ── PATCH /api/conversations/:id ─────────────────────────────────────────────
+// ── PATCH /api/conversations/:id ──────────────────────────────────────────────
 app.patch('/api/conversations/:id', async (req, res) => {
   try {
     const convo = await Conversation.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -91,7 +102,7 @@ app.patch('/api/conversations/:id', async (req, res) => {
   }
 });
 
-// ── DELETE /api/conversations/:id ────────────────────────────────────────────
+// ── DELETE /api/conversations/:id ─────────────────────────────────────────────
 app.delete('/api/conversations/:id', async (req, res) => {
   try {
     await Conversation.findByIdAndDelete(req.params.id);
@@ -111,7 +122,7 @@ app.delete('/api/conversations', async (req, res) => {
   }
 });
 
-// ── POST /api/chat (STREAMING) ───────────────────────────────────────────────
+// ── POST /api/chat (STREAMING) ────────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   const { conversationId, message, model, images = [] } = req.body;
 
@@ -154,10 +165,10 @@ app.post('/api/chat', async (req, res) => {
       if (last.role === 'user') last.images = images;
     }
 
-    // Stream from Ollama
+    // ── Stream from Ollama (Local or Cloud) ───────────────────────────────────
     const ollamaRes = await fetch(`${OLLAMA}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders(),
       body: JSON.stringify({ model: activeModel, messages: ollamaMessages, stream: true }),
     });
 
@@ -214,7 +225,7 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// ── GET /api/conversations/search ────────────────────────────────────────────
+// ── GET /api/search ───────────────────────────────────────────────────────────
 app.get('/api/search', async (req, res) => {
   try {
     const { q } = req.query;
@@ -231,7 +242,7 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// ── GET /api/conversations/:id/export ────────────────────────────────────────
+// ── GET /api/conversations/:id/export ─────────────────────────────────────────
 app.get('/api/conversations/:id/export', async (req, res) => {
   try {
     const convo = await Conversation.findById(req.params.id);
@@ -261,7 +272,7 @@ app.get('/api/conversations/:id/export', async (req, res) => {
   }
 });
 
-// ── PATCH /api/conversations/:id/pin ─────────────────────────────────────────
+// ── PATCH /api/conversations/:id/pin ──────────────────────────────────────────
 app.patch('/api/conversations/:id/pin', async (req, res) => {
   try {
     const convo = await Conversation.findById(req.params.id);
@@ -307,6 +318,16 @@ app.delete('/api/personas/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── Start ────────────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+// ── Serve React Frontend in Production ───────────────────────────────────────
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+  });
+}
