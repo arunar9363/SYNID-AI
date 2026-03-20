@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+const api = axios.create({ baseURL: `${BASE_URL}/api` });
 
 export const getModels = () => api.get('/models').then(r => r.data);
 export const getConversations = () => api.get('/conversations').then(r => r.data);
