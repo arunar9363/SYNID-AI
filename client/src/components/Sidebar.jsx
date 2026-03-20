@@ -463,6 +463,11 @@ export default function Sidebar() {
           transition: all var(--transition);
         }
         .icon-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+        /* Model select option fix */
+.model-select option {
+  white-space: normal;  /* add this */
+  word-wrap: break-word;
+}
       `}</style>
     </>
   );

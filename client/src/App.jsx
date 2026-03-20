@@ -42,6 +42,20 @@ function AppInner() {
             backdrop-filter: blur(2px);
           }
         }
+          // sidebar-toggle-btn CSS mein change karo
+.sidebar-toggle-btn {
+  position: fixed; 
+  top: 14px; 
+  left: 14px; 
+  z-index: 50;
+  width: 38px; height: 38px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); cursor: pointer;
+  transition: all var(--transition);
+}
       `}</style>
     </div>
   );

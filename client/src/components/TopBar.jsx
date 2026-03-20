@@ -6,7 +6,7 @@ import SettingsModal from './SettingsModal';
 import SearchModal from './SearchModal';
 
 export default function TopBar({ systemPrompt, setSystemPrompt }) {
-  const { activeId, conversations, selectConversation, messages, streaming } = useChat();
+  const { activeId, conversations, selectConversation, messages, streaming, sidebarOpen } = useChat(); 
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -43,7 +43,7 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
 
   return (
     <>
-      <div className="topbar">
+      <div className="topbar" style={{ paddingLeft: sidebarOpen ? '20px' : '64px' }}>
         <div className="topbar-left">
           {activeConvo && (
             <div className="chat-title-display">
