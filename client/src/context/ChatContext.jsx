@@ -8,7 +8,7 @@ export function ChatProvider({ children }) {
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [models, setModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState('llama3.2');
+  const [selectedModel, setSelectedModel] = useState('gemma3:4b');
   const [streaming, setStreaming] = useState(false);
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [ollamaOnline, setOllamaOnline] = useState(true);
@@ -16,7 +16,7 @@ export function ChatProvider({ children }) {
 
   useEffect(() => {
     api.getModels()
-      .then(m => { setModels(m); if (m.length > 0) setSelectedModel(m[0].name); setOllamaOnline(true); })
+      .then(m => { setModels(m); setOllamaOnline(true); })
       .catch(() => setOllamaOnline(false));
   }, []);
 
