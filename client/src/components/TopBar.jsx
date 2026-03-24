@@ -6,7 +6,7 @@ import SettingsModal from './SettingsModal';
 import SearchModal from './SearchModal';
 
 export default function TopBar({ systemPrompt, setSystemPrompt }) {
-  const { activeId, conversations, selectConversation, messages, streaming, sidebarOpen } = useChat(); 
+  const { activeId, conversations, selectConversation, messages, streaming, sidebarOpen } = useChat();
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -54,18 +54,18 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
         </div>
 
         <div className="topbar-right">
-          {/* Token counter */}
+          {/* Token counter — hidden on mobile to keep buttons visible */}
           {messages.length > 0 && (
-            <div className="token-badge" title="Estimated tokens in context">
+            <div className="token-badge token-badge-desktop" title="Estimated tokens in context">
               ~{estimatedTokens.toLocaleString()} tokens
             </div>
           )}
 
-          {/* Streaming indicator */}
+          {/* Streaming indicator — short label on mobile */}
           {streaming && (
             <div className="gen-badge">
               <span className="gen-dot" />
-              Generating
+              <span className="gen-label">Generating</span>
             </div>
           )}
 
@@ -127,20 +127,22 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
           flex-shrink: 0;
           position: relative; z-index: 10;
         }
-        .topbar-left { display: flex; align-items: center; gap: 10px; }
-        .chat-title-display { display: flex; align-items: center; gap: 8px; }
+        .topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; overflow: hidden; }
+        .chat-title-display { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
         .chat-title-text {
           font-size: 14px; font-weight: 600; color: var(--text-primary);
           letter-spacing: -0.2px;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
 
-        .topbar-right { display: flex; align-items: center; gap: 6px; }
+        .topbar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
         .token-badge {
           font-size: 11px; color: var(--text-muted);
           background: var(--bg-elevated);
           border: 1px solid var(--border-subtle);
           border-radius: 5px; padding: 2px 8px;
           font-family: var(--font-mono);
+          white-space: nowrap;
         }
         .gen-badge {
           display: flex; align-items: center; gap: 6px;
@@ -151,6 +153,7 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
         .gen-dot {
           width: 6px; height: 6px; border-radius: 50%;
           background: var(--accent); animation: pulse 1s infinite;
+          flex-shrink: 0;
         }
 
         .topbar-btn {
@@ -159,6 +162,7 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
           background: none; border: none; cursor: pointer;
           color: var(--text-muted); display: flex; align-items: center; justify-content: center;
           transition: all var(--transition);
+          flex-shrink: 0;
         }
         .topbar-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
         .active-dot {
@@ -188,6 +192,29 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
         .dropdown-menu button:hover { background: var(--bg-hover); color: var(--text-primary); }
         .dropdown-menu button.danger:hover { color: var(--danger); }
         .menu-divider { height: 1px; background: var(--border-subtle); margin: 4px 0; }
+
+        /* Mobile fixes */
+        @media (max-width: 640px) {
+          .topbar {
+            padding: 0 12px !important;
+          }
+          .token-badge-desktop {
+            display: none;
+          }
+          .gen-label {
+            display: none;
+          }
+          .gen-badge {
+            padding: 3px 6px;
+          }
+          .chat-title-text {
+            font-size: 13px;
+            max-width: 120px;
+          }
+          .model-chip {
+            display: none;
+          }
+        }
       `}</style>
     </>
   );

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useChat } from '../context/ChatContext';
 import {
   Plus, MessageSquare, Trash2, Edit3, Check, X,
-  ChevronLeft, Bot, Cpu, AlertCircle, Layers
+  ChevronLeft, Bot, Cpu, AlertCircle, Layers, ChevronDown
 } from 'lucide-react';
 
 function timeAgo(dateStr) {
@@ -19,17 +19,124 @@ function timeAgo(dateStr) {
 
 const MODEL_DESCRIPTIONS = {
   'llama-3.3-70b-versatile': '⭐ Balanced & Reliable · Best for coding and everyday tasks',
-
   'meta-llama/llama-4-maverick-17b-128e-instruct': '🚀 Most Capable · Best for complex reasoning and AI agents',
-
   'meta-llama/llama-4-scout-17b-16e-instruct': '⚡ Fast & Multimodal · Best for chat and long inputs',
-
   'qwen-qwq-32b': '🧠 Reasoning Specialist · Best for math, logic, and analysis',
-
   'mixtral-8x7b-32768': '📚 Long Context · Good for large documents and reasoning'
 };
 
+const MODEL_GROUPS = [
+  {
+    label: '⭐ Recommended',
+    models: [
+      { value: 'llama-3.3-70b-versatile', label: 'llama-3.3-70b — Best Overall' },
+      { value: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'llama-4-maverick — Most Capable' },
+    ]
+  },
+  {
+    label: '⚡ Fast & Light',
+    models: [
+      { value: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'llama-4-scout — Fast Multimodal' },
+    ]
+  },
+  {
+    label: '🧠 Reasoning & Analysis',
+    models: [
+      { value: 'qwen-qwq-32b', label: 'qwen-qwq-32b — Strong Reasoning' },
+      { value: 'mixtral-8x7b-32768', label: 'mixtral-8x7b — Long Context' },
+    ]
+  },
+  {
+    label: '🔥 Large & Powerful',
+    models: [
+      { value: 'llama-3.3-70b-versatile', label: 'llama-3.3-70b' },
+      { value: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'llama-4-maverick' },
+    ]
+  },
+];
+
 const KNOWN_MODELS = Object.keys(MODEL_DESCRIPTIONS);
+
+// Custom dropdown component — fully styled, works on all devices
+function ModelDropdown({ selectedModel, setSelectedModel, extraModels }) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Get short display label for the selected model
+  const getShortLabel = (val) => {
+    for (const group of MODEL_GROUPS) {
+      const found = group.models.find(m => m.value === val);
+      if (found) return found.label;
+    }
+    const extra = extraModels.find(m => m.name === val);
+    if (extra) return extra.name;
+    return val;
+  };
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, []);
+
+  const handleSelect = (val) => {
+    setSelectedModel(val);
+    setOpen(false);
+  };
+
+  // Build extra models group if needed
+  const extraGroup = extraModels.length > 0 ? [{
+    label: '🆕 Other Available',
+    models: extraModels.map(m => ({ value: m.name, label: m.name }))
+  }] : [];
+
+  const allGroups = [...MODEL_GROUPS, ...extraGroup];
+
+  return (
+    <div className="model-dropdown-wrapper" ref={dropdownRef}>
+      {/* Trigger button */}
+      <button
+        className="model-trigger"
+        onClick={() => setOpen(o => !o)}
+        type="button"
+      >
+        <span className="model-trigger-text">{getShortLabel(selectedModel)}</span>
+        <ChevronDown size={14} className={`model-chevron ${open ? 'open' : ''}`} />
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div className="model-panel">
+          {allGroups.map((group, gi) => (
+            <div key={gi} className="model-group">
+              <div className="model-group-label">{group.label}</div>
+              {group.models.map((m, mi) => (
+                <button
+                  key={mi}
+                  className={`model-option ${selectedModel === m.value ? 'selected' : ''}`}
+                  onClick={() => handleSelect(m.value)}
+                  type="button"
+                >
+                  {selectedModel === m.value && <span className="model-check">✓</span>}
+                  <span className="model-option-text">{m.label}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ConvoItem({ convo, active, onSelect, onDelete, onRename }) {
   const [editing, setEditing] = useState(false);
@@ -118,39 +225,11 @@ export default function Sidebar() {
           <div className="section-label"><Cpu size={11} />Model</div>
           {ollamaOnline ? (
             <div className="model-select-wrapper">
-              <select
-                className="model-select"
-                value={selectedModel}
-                onChange={e => setSelectedModel(e.target.value)}
-              >
-                <optgroup label="⭐ Recommended">
-                  <option value="llama-3.3-70b-versatile">llama-3.3-70b — Best Overall</option>
-                  <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick — Most Capable</option>
-                </optgroup>
-
-                <optgroup label="⚡ Fast & Light">
-                  <option value="meta-llama/llama-4-scout-17b-16e-instruct">llama-4-scout — Fast Multimodal</option>
-                </optgroup>
-
-                <optgroup label="🧠 Reasoning & Analysis">
-                  <option value="qwen-qwq-32b">qwen-qwq-32b — Strong Reasoning</option>
-                  <option value="mixtral-8x7b-32768">mixtral-8x7b — Long Context</option>
-                </optgroup>
-
-                <optgroup label="🔥 Large & Powerful">
-                  <option value="llama-3.3-70b-versatile">llama-3.3-70b</option>
-                  <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick</option>
-                </optgroup>
-
-                {extraModels.length > 0 && (
-                  <optgroup label="🆕 Other Available">
-                    {extraModels.map(m => (
-                      <option key={m.name} value={m.name}>{m.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-
+              <ModelDropdown
+                selectedModel={selectedModel}
+                setSelectedModel={setSelectedModel}
+                extraModels={extraModels}
+              />
               {MODEL_DESCRIPTIONS[selectedModel] && (
                 <div className="model-desc">
                   {MODEL_DESCRIPTIONS[selectedModel]}
@@ -208,7 +287,7 @@ export default function Sidebar() {
       {/* Toggle when closed */}
       {!sidebarOpen && (
         <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(true)} title="Open sidebar">
-          <img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 30, height: 30, objectFit: 'contain' }} />
+          <Bot size={18} />
         </button>
       )}
 
@@ -277,8 +356,16 @@ export default function Sidebar() {
           margin-bottom: 6px;
         }
         .model-select-wrapper { display: flex; flex-direction: column; gap: 6px; }
-        .model-select {
-          width: 100%; padding: 7px 10px;
+
+        /* ── Custom model dropdown ── */
+        .model-dropdown-wrapper {
+          position: relative;
+          width: 100%;
+        }
+        .model-trigger {
+          width: 100%;
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 8px 12px;
           background: var(--bg-elevated);
           border: 1px solid var(--border);
           border-radius: 8px;
@@ -286,16 +373,84 @@ export default function Sidebar() {
           font-family: var(--font-sans);
           font-size: 12px;
           cursor: pointer;
-          outline: none;
+          text-align: left;
           transition: border-color var(--transition);
+          gap: 8px;
         }
-        .model-select:hover { border-color: var(--accent); }
-        .model-select option {
+        .model-trigger:hover { border-color: var(--accent); }
+        .model-trigger-text {
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .model-chevron {
+          flex-shrink: 0;
+          color: var(--text-muted);
+          transition: transform 0.18s ease;
+        }
+        .model-chevron.open { transform: rotate(180deg); }
+
+        .model-panel {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          right: 0;
           background: var(--bg-elevated);
-          color: var(--text-primary);
-          padding: 4px;
-          white-space: normal;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          z-index: 200;
+          overflow-y: auto;
+          max-height: 320px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+          animation: fadeUp 0.15s ease;
         }
+        .model-group { padding: 6px 0; border-bottom: 1px solid var(--border-subtle); }
+        .model-group:last-child { border-bottom: none; }
+        .model-group-label {
+          font-size: 10px;
+          font-weight: 600;
+          letter-spacing: 0.7px;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          padding: 4px 12px 4px;
+        }
+        .model-option {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 8px 12px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: var(--text-secondary);
+          font-family: var(--font-sans);
+          font-size: 12px;
+          text-align: left;
+          transition: background var(--transition), color var(--transition);
+        }
+        .model-option:hover {
+          background: var(--bg-hover);
+          color: var(--text-primary);
+        }
+        .model-option.selected {
+          color: var(--accent);
+          background: var(--accent-dim);
+        }
+        .model-check {
+          font-size: 11px;
+          color: var(--accent);
+          flex-shrink: 0;
+          width: 14px;
+        }
+        .model-option-text {
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
         .model-desc {
           font-size: 11px;
           color: var(--accent);
