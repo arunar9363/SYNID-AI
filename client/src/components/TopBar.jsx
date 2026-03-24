@@ -51,9 +51,6 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
               <span className="model-chip">{activeConvo.model}</span>
             </div>
           )}
-          {!activeConvo && (
-            <span className="chat-title-text muted">New Conversation</span>
-          )}
         </div>
 
         <div className="topbar-right">
@@ -135,13 +132,6 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
         .chat-title-text {
           font-size: 14px; font-weight: 600; color: var(--text-primary);
           letter-spacing: -0.2px;
-        }
-        .chat-title-text.muted { color: var(--text-muted); font-weight: 400; }
-        .model-chip {
-          background: var(--bg-elevated); border: 1px solid var(--border);
-          border-radius: 5px; padding: 1px 7px;
-          font-family: var(--font-mono); font-size: 11px;
-          color: var(--text-muted);
         }
 
         .topbar-right { display: flex; align-items: center; gap: 6px; }

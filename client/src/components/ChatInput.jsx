@@ -91,7 +91,7 @@ export default function ChatInput({ systemPrompt }) {
             className="chat-textarea"
             placeholder={images.length > 0
               ? 'Ask about the image... (requires llava model)'
-              : 'Message SYNID AI... (Enter send · Shift+Enter new line)'}
+              : 'Talk to SYNID AI...'}
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={handleKey}

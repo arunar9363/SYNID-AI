@@ -135,7 +135,7 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
           </div>
         )}
 
-        {/* Attached images */}
+        Attached images
         {message.images?.length > 0 && (
           <div className="msg-images">
             {message.images.map((img, i) => (
