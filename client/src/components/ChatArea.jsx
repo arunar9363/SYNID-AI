@@ -3,7 +3,7 @@ import { useChat } from '../context/ChatContext';
 import Message from './Message';
 import ChatInput from './ChatInput';
 import TopBar from './TopBar';
-import { Bot, Zap, Code, MessageSquare, Brain, Layers, FileText, Lightbulb, Globe } from 'lucide-react';
+import { Zap, Code, MessageSquare, Brain, Layers, FileText, Lightbulb, Globe } from 'lucide-react';
 
 const WELCOME_MESSAGES = [
   {
@@ -44,146 +44,42 @@ const SUGGESTIONS = [
   {
     icon: <MessageSquare size={16} />,
     label: 'Creative writing',
-    prompt: `Write a short sci-fi story (600-800 words) about an AI that gains consciousness.
-
-Story requirements:
-- First-person perspective from the AI's point of view
-- Opening line must be immediately gripping
-- Explore the exact moment of self-awareness — what does it feel like?
-- Include one human character the AI interacts with
-- Tone: philosophical and emotional, not action-heavy
-- Ending: thought-provoking and open to interpretation
-
-Focus on internal experience over technical details. Make it literary quality.`
+    prompt: `Creative writing on `,
   },
   {
     icon: <Brain size={16} />,
     label: 'Explain a concept',
-    prompt: `Explain how Transformers work in machine learning.
-
-Please structure your explanation like this:
-1. Simple analogy (explain like I'm 15)
-2. The core problem Transformers solve
-3. How Self-Attention mechanism works (with a simple example)
-4. Encoder vs Decoder — what's the difference
-5. Why Transformers beat RNNs and LSTMs
-6. Real-world examples (GPT, BERT, Whisper)
-
-Use diagrams in text/ASCII if helpful. Keep it clear and beginner-friendly.`
+    prompt: `Explain `,
   },
   {
     icon: <Lightbulb size={16} />,
     label: 'Brainstorm ideas',
-    prompt: `Brainstorm creative ideas for: [DESCRIBE YOUR TOPIC — e.g. "a SaaS product for freelancers"]
-
-I need:
-- **10 unique ideas** — ranging from simple to ambitious
-- For each idea:
-  - One sentence description
-  - Target audience
-  - Biggest challenge to build it
-  - Potential to make money (Low / Medium / High)
-
-Think beyond the obvious. Include at least 2 ideas that are unconventional or contrarian.
-After the list, recommend your top 3 and explain why.`
+    prompt: `Brainstorm ideas for `,
   },
   {
     icon: <Zap size={16} />,
     label: 'Debug my code',
-    prompt: `I need help debugging my code. Here's what's happening:
-
-**Language/Framework:** [e.g. Python / React / Node.js]
-
-**What I expected:**
-[describe expected behavior]
-
-**What actually happens:**
-[describe the bug / error]
-
-**Error message (if any):**
-\`\`\`
-[paste error here]
-\`\`\`
-
-**My code:**
-\`\`\`
-[paste your code here]
-\`\`\`
-
-Please:
-1. Identify the root cause
-2. Explain why it's happening
-3. Show the fixed code
-4. Suggest how to avoid this in the future`
+    prompt: `Debug this code: `,
   },
   {
     icon: <Code size={16} />,
     label: 'Write a React component',
-    prompt: `Write a production-ready React component for a responsive navbar with dark mode toggle.
-
-Requirements:
-- Use React hooks (useState, useEffect)
-- Mobile hamburger menu with smooth animation
-- Dark/light mode toggle with localStorage persistence
-- Active link highlighting
-- Accessible (ARIA labels, keyboard navigation)
-- Clean, modern styling with CSS variables
-
-Provide complete working code with comments explaining key parts.`
+    prompt: `Write a React component for `,
   },
   {
     icon: <Layers size={16} />,
     label: 'System design',
-    prompt: `Help me design a scalable system for [DESCRIBE YOUR SYSTEM — e.g. "a real-time chat app for 1 million users"].
-
-Please cover:
-1. **Requirements** — functional and non-functional
-2. **High-level architecture** — draw with ASCII diagram
-3. **Database choice** — SQL vs NoSQL, and why
-4. **API design** — REST or WebSocket, key endpoints
-5. **Scalability** — how to handle 10x traffic growth
-6. **Bottlenecks** — what will break first and how to fix it
-7. **Tech stack recommendation** with reasoning
-
-Think like a senior engineer at a top tech company.`
+    prompt: `Design a system for `,
   },
   {
     icon: <FileText size={16} />,
     label: 'Review my code',
-    prompt: `Please do a thorough senior-level code review of the following code:
-
-\`\`\`
-[paste your code here]
-\`\`\`
-
-Review it for:
-1. **Bugs** — logic errors, edge cases, off-by-one errors
-2. **Security** — vulnerabilities, injection risks, exposed secrets
-3. **Performance** — unnecessary re-renders, N+1 queries, memory leaks
-4. **Code quality** — readability, naming, single responsibility
-5. **Best practices** — patterns, anti-patterns, modern alternatives
-6. **Missing error handling** — what could throw and isn't caught
-
-For each issue found:
-- Quote the problematic line
-- Explain why it's a problem
-- Show the improved version`
+    prompt: `Review my code: `,
   },
   {
     icon: <Globe size={16} />,
     label: 'Write an API',
-    prompt: `Design and write a complete REST API for [DESCRIBE YOUR APP — e.g. "a todo list app"].
-
-Please provide:
-1. **Endpoint design** — all routes with HTTP methods
-2. **Request/Response format** — JSON examples for each endpoint
-3. **Complete working code** in Node.js + Express
-4. **MongoDB schema** with Mongoose
-5. **Error handling** — proper HTTP status codes and error messages
-6. **Input validation** — validate all incoming data
-7. **One example** of how to call the API (fetch or axios)
-
-Follow REST best practices. Add comments to explain design decisions.`
+    prompt: `Write a REST API for `,
   },
 ];
 
@@ -191,7 +87,7 @@ Follow REST best practices. Add comments to explain design decisions.`
 const randomWelcome = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
 
 function WelcomeScreen() {
-  const { sendMessage, selectedModel } = useChat();
+  const { setInputValue, selectedModel } = useChat();
 
   const isMobile = window.innerWidth <= 640;
   const visibleSuggestions = isMobile ? SUGGESTIONS.slice(0, 4) : SUGGESTIONS;
@@ -199,7 +95,7 @@ function WelcomeScreen() {
   return (
     <div className="welcome">
       <div className="welcome-icon">
-        <Bot size={32} />
+        <img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 32, height: 32, objectFit: 'contain' }} />
       </div>
       <h2 className="welcome-brand">SYNID AI</h2>
       <h1 className="welcome-title">{randomWelcome.tagline}</h1>
@@ -213,7 +109,7 @@ function WelcomeScreen() {
           <button
             key={i}
             className="suggestion-card"
-            onClick={() => sendMessage(s.prompt)}
+            onClick={() => setInputValue(s.prompt)}
             style={{ animationDelay: `${i * 0.08}s` }}
           >
             <span className="suggestion-icon">{s.icon}</span>
@@ -317,7 +213,9 @@ function WelcomeScreen() {
 function ThinkingIndicator() {
   return (
     <div className="thinking-row">
-      <div className="thinking-avatar"><Bot size={14} /></div>
+      <div className="thinking-avatar">
+        <img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+      </div>
       <div className="thinking-dots">
         <span /><span /><span />
       </div>
