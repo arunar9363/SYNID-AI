@@ -1,22 +1,37 @@
 :root {
-  --bg-base: #FFFBF1;
-  --bg-surface: #FFF2D0;
-  --bg-elevated: #FFF7E8;
-  --bg-hover: #FFE8D6;
-  --bg-active: #FFDDD0;
-  --border: #FFB2B2;
-  --border-subtle: #FFD6D6;
-  --text-primary: #3a1a1a;
-  --text-secondary: #7a4a4a;
-  --text-muted: #b08080;
-  --accent: #E36A6A;
-  --accent-hover: #c85555;
-  --accent-dim: rgba(227, 106, 106, 0.12);
-  --accent-glow: rgba(227, 106, 106, 0.25);
-  --user-bubble: #FFE0E0;
+  /* ── SYNID AI · Modern Dark Neural Palette ── */
+
+  
+background:
+  radial-gradient(ellipse 55% 45% at 75% 25%, rgba(108,143,255,0.28) 0%, transparent 65%),
+  radial-gradient(ellipse 45% 55% at 15% 75%, rgba(60,100,220,0.20) 0%, transparent 65%),
+  radial-gradient(ellipse 30% 30% at 50% 50%, rgba(180,140,255,0.08) 0%, transparent 50%),
+  linear-gradient(160deg, #06080E 0%, #0C0F1C 45%, #090B16 100%);
+
+  /* Borders — cool blue-grey with depth */
+  --border: #2A3050;
+  --border-subtle: #1C2138;
+
+  /* Text — crisp white hierarchy */
+  --text-primary: #EDF0FF;
+  --text-secondary: #8B93B8;
+  --text-muted: #4A5178;
+
+  /* Accent — electric cyan-violet (AI neural glow) */
+  --accent: #6C8FFF;
+  --accent-hover: #8AABFF;
+  --accent-dim: rgba(108, 143, 255, 0.12);
+  --accent-glow: rgba(108, 143, 255, 0.28);
+
+  /* User bubble — soft violet tint */
+  --user-bubble: #1A1D35;
+
+  /* Semantic */
   --success: #4ade80;
   --warning: #fbbf24;
-  --danger: #E36A6A;
+  --danger: #FF5C7A;
+
+  /* ── unchanged properties ── */
   --font-sans: 'Sora', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius: 12px;

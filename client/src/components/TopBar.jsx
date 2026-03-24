@@ -91,12 +91,6 @@ export default function TopBar({ systemPrompt, setSystemPrompt }) {
               </button>
               {showMenu && (
                 <div className="dropdown-menu" onMouseLeave={() => setShowMenu(false)}>
-                  <button onClick={() => { exportConversation(activeId, 'markdown'); setShowMenu(false); }}>
-                    <Download size={13} />Export as Markdown
-                  </button>
-                  <button onClick={() => { exportConversation(activeId, 'json'); setShowMenu(false); }}>
-                    <Download size={13} />Export as JSON
-                  </button>
                   <div className="menu-divider" />
                   <button onClick={() => { handlePin(); setShowMenu(false); }}>
                     {activeConvo?.pinned ? <PinOff size={13} /> : <Pin size={13} />}
