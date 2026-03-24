@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://synid-ai.onrender.com';
 const api = axios.create({ baseURL: `${BASE_URL}/api` });
 
 export const getModels = () => api.get('/models').then(r => r.data);
@@ -14,7 +14,7 @@ export const pinConversation = (id) => api.patch(`/conversations/${id}/pin`).the
 export const clearMessages = (id) => api.delete(`/conversations/${id}/messages`).then(r => r.data);
 export const searchConversations = (q) => api.get(`/search?q=${encodeURIComponent(q)}`).then(r => r.data);
 export const exportConversation = (id, format = 'markdown') => {
-  window.open(`/api/conversations/${id}/export?format=${format}`, '_blank');
+  window.open(`${BASE_URL}/api/conversations/${id}/export?format=${format}`, '_blank');
 };
 
 // Personas
@@ -25,7 +25,7 @@ export const deletePersona = (id) => api.delete(`/personas/${id}`).then(r => r.d
 // Streaming chat using fetch + SSE
 export async function streamChat({ conversationId, message, model, systemPrompt, images = [], onChunk, onDone, onError, onConversationId, onTitle }) {
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch(`${BASE_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversationId, message, model, systemPrompt, images }),
