@@ -104,7 +104,6 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
           )}
         </div>
 
-        {/* Message actions toolbar */}
         {!message._streaming && hovered && (
           <div className={`msg-actions ${isUser ? 'user' : ''}`}>
             <CopyBtn text={message.content} small />
@@ -134,15 +133,6 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
             )}
           </div>
         )}
-
-        Attached images
-        {message.images?.length > 0 && (
-          <div className="msg-images">
-            {message.images.map((img, i) => (
-              <img key={i} src={img.preview || `data:image/jpeg;base64,${img.base64}`} alt="attached" className="msg-img" />
-            ))}
-          </div>
-        )}
       </div>
 
       <style>{`
@@ -167,7 +157,7 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
         .msg-content { width: 100%; }
         .user-text {
           display: inline-block;
-          background: var(--user-bubble); border: 1px solid rgba(124,106,247,0.18);
+          background: var(--user-bubble); border: 1px solid rgba(74,172,207,0.18);
           border-radius: 14px 14px 4px 14px; padding: 10px 16px;
           font-size: 14px; line-height: 1.65; color: var(--text-primary);
           max-width: 100%; white-space: pre-wrap; word-break: break-word;
@@ -196,7 +186,6 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
         .copy-btn.small { border: none; padding: 3px 6px; }
         .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
         .streaming-cursor { display: inline-block; color: var(--accent); animation: blink 1s infinite; font-weight: 300; }
-
         .msg-actions {
           display: flex; align-items: center; gap: 4px;
           margin-top: 8px; padding: 4px 0;
@@ -220,7 +209,6 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
         .reaction-btn:hover { border-color: var(--border); color: var(--text-primary); }
         .reaction-btn.active-up { border-color: var(--success); color: var(--success); background: rgba(74,222,128,0.1); }
         .reaction-btn.active-down { border-color: var(--danger); color: var(--danger); background: rgba(248,113,113,0.1); }
-
         .edit-box { width: 100%; }
         .edit-textarea {
           width: 100%; background: var(--bg-elevated); border: 1px solid var(--accent);
@@ -239,9 +227,6 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
         .edit-cancel:hover { color: var(--text-primary); border-color: var(--text-muted); }
         .edit-save { background: var(--accent); border: none; color: white; }
         .edit-save:hover { background: var(--accent-hover); }
-
-        .msg-images { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-        .msg-img { width: 140px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
       `}</style>
     </div>
   );

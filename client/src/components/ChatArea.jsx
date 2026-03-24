@@ -86,8 +86,8 @@ const SUGGESTIONS = [
 // Har refresh pe alag welcome message
 const randomWelcome = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
 
-function WelcomeScreen() {
-  const { setInputValue, selectedModel } = useChat();
+function WelcomeScreen({ setInputValue }) {
+  const { selectedModel } = useChat();
 
   const isMobile = window.innerWidth <= 640;
   const visibleSuggestions = isMobile ? SUGGESTIONS.slice(0, 4) : SUGGESTIONS;
@@ -252,6 +252,7 @@ function ThinkingIndicator() {
 export default function ChatArea() {
   const { messages, streaming, editMessage, regenerate } = useChat();
   const [systemPrompt, setSystemPrompt] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -267,7 +268,7 @@ export default function ChatArea() {
       <TopBar systemPrompt={systemPrompt} setSystemPrompt={setSystemPrompt} />
       <div className="messages-container" ref={containerRef}>
         {messages.length === 0 ? (
-          <WelcomeScreen />
+          <WelcomeScreen setInputValue={setInputValue} />
         ) : (
           <div className="messages-inner">
             {messages.map((msg, i) => (
@@ -284,7 +285,7 @@ export default function ChatArea() {
           </div>
         )}
       </div>
-      <ChatInput systemPrompt={systemPrompt} />
+      <ChatInput systemPrompt={systemPrompt} inputValue={inputValue} setInputValue={setInputValue} />
 
       <style>{`
         .chat-area {

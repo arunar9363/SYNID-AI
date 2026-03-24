@@ -208,7 +208,7 @@ export default function Sidebar() {
       {/* Toggle when closed */}
       {!sidebarOpen && (
         <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(true)} title="Open sidebar">
-          <Bot size={18} />
+          <img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 30, height: 30, objectFit: 'contain' }} />
         </button>
       )}
 

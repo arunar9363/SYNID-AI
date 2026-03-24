@@ -13,6 +13,7 @@ export function ChatProvider({ children }) {
   const [loadingConvos, setLoadingConvos] = useState(true);
   const [ollamaOnline, setOllamaOnline] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 640);
+
   useEffect(() => {
     api.getModels()
       .then(m => { setModels(m); setOllamaOnline(true); })
@@ -35,20 +36,17 @@ export function ChatProvider({ children }) {
 
   const newChat = useCallback(() => { setActiveId(null); setMessages([]); }, []);
 
-  const _doStream = useCallback(async ({ conversationId, message, systemPrompt, images = [], msgHistory }) => {
+  const _doStream = useCallback(async ({ conversationId, message, systemPrompt, msgHistory }) => {
     setStreaming(true);
     let assistantContent = '';
     let resolvedId = conversationId;
-
-    // Build the payload - include images as base64 if provided
-    const imageData = images.map(img => img.base64);
 
     await api.streamChat({
       conversationId,
       message,
       model: selectedModel,
       systemPrompt,
-      images: imageData,
+      images: [],
       onConversationId: (id) => {
         resolvedId = id;
         setActiveId(id);
@@ -87,17 +85,16 @@ export function ChatProvider({ children }) {
     });
   }, [selectedModel]);
 
-  const sendMessage = useCallback(async (text, systemPrompt = '', images = []) => {
-    if ((!text.trim() && images.length === 0) || streaming) return;
+  const sendMessage = useCallback(async (text, systemPrompt = '') => {
+    if (!text.trim() || streaming) return;
 
-    const userMsg = { role: 'user', content: text, timestamp: new Date(), images };
+    const userMsg = { role: 'user', content: text, timestamp: new Date() };
     const assistantMsg = { role: 'assistant', content: '', timestamp: new Date(), _streaming: true };
     setMessages(prev => [...prev, userMsg, assistantMsg]);
 
-    await _doStream({ conversationId: activeId, message: text, systemPrompt, images });
+    await _doStream({ conversationId: activeId, message: text, systemPrompt });
   }, [activeId, streaming, _doStream]);
 
-  // Edit a user message — truncate history to that message and re-send
   const editMessage = useCallback(async (msgIndex, newText, systemPrompt = '') => {
     if (streaming) return;
     const truncated = messages.slice(0, msgIndex);
@@ -105,25 +102,20 @@ export function ChatProvider({ children }) {
     const assistantMsg = { role: 'assistant', content: '', timestamp: new Date(), _streaming: true };
     setMessages([...truncated, userMsg, assistantMsg]);
 
-    // We need to start a new conversation or send truncated context
-    // For simplicity: clear the conversation and re-stream
-    await _doStream({ conversationId: null, message: newText, systemPrompt, images: [] });
+    await _doStream({ conversationId: null, message: newText, systemPrompt });
   }, [messages, streaming, _doStream]);
 
-  // Regenerate the last assistant response
   const regenerate = useCallback(async (systemPrompt = '') => {
     if (streaming || messages.length < 2) return;
-    // Find the last user message
     const lastUserIdx = [...messages].reverse().findIndex(m => m.role === 'user');
     if (lastUserIdx === -1) return;
     const userMsg = messages[messages.length - 1 - lastUserIdx];
 
-    // Remove last assistant message, add empty one
     const withoutLast = messages.slice(0, -1);
     const assistantMsg = { role: 'assistant', content: '', timestamp: new Date(), _streaming: true };
     setMessages([...withoutLast, assistantMsg]);
 
-    await _doStream({ conversationId: activeId, message: userMsg.content, systemPrompt, images: [] });
+    await _doStream({ conversationId: activeId, message: userMsg.content, systemPrompt });
   }, [messages, streaming, activeId, _doStream]);
 
   const deleteConversation = useCallback(async (id) => {
