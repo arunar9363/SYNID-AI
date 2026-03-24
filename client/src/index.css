@@ -1,30 +1,25 @@
 :root {
-  /* ── SYNID AI · Modern Dark Neural Palette ── */
+  /* ── SYNID AI · Logo-Matched Palette ── */
 
-  
-background:
-  radial-gradient(ellipse 55% 45% at 75% 25%, rgba(108,143,255,0.28) 0%, transparent 65%),
-  radial-gradient(ellipse 45% 55% at 15% 75%, rgba(60,100,220,0.20) 0%, transparent 65%),
-  radial-gradient(ellipse 30% 30% at 50% 50%, rgba(180,140,255,0.08) 0%, transparent 50%),
-  linear-gradient(160deg, #06080E 0%, #0C0F1C 45%, #090B16 100%);
+  background: radial-gradient(ellipse 55% 45% at 75% 25%, rgba(90,172,204,0.22) 0%, transparent 65%), radial-gradient(ellipse 45% 55% at 15% 75%, rgba(46,111,173,0.20) 0%, transparent 65%), radial-gradient(ellipse 30% 30% at 50% 50%, rgba(232,201,160,0.06) 0%, transparent 50%), linear-gradient(160deg, #06080E 0%, #090E1A 45%, #070A14 100%);
 
-  /* Borders — cool blue-grey with depth */
-  --border: #2A3050;
-  --border-subtle: #1C2138;
+  /* Borders — muted teal-steel */
+  --border: #1E3448;
+  --border-subtle: #131E2C;
 
-  /* Text — crisp white hierarchy */
-  --text-primary: #EDF0FF;
-  --text-secondary: #8B93B8;
-  --text-muted: #4A5178;
+  /* Text — warm white with slight teal tint */
+  --text-primary: #E8F2F8;
+  --text-secondary: #7A9EB8;
+  --text-muted: #3D5A6E;
 
-  /* Accent — electric cyan-violet (AI neural glow) */
-  --accent: #6C8FFF;
-  --accent-hover: #8AABFF;
-  --accent-dim: rgba(108, 143, 255, 0.12);
-  --accent-glow: rgba(108, 143, 255, 0.28);
+  /* Accent — logo's teal (the bright cyan-teal orb) */
+  --accent: #4AACCF;
+  --accent-hover: #6ABFDD;
+  --accent-dim: rgba(74, 172, 207, 0.12);
+  --accent-glow: rgba(74, 172, 207, 0.28);
 
-  /* User bubble — soft violet tint */
-  --user-bubble: #1A1D35;
+  /* User bubble — deep navy teal tint */
+  --user-bubble: #0F1E2C;
 
   /* Semantic */
   --success: #4ade80;
@@ -46,7 +41,12 @@ html, body, #root {
   height: 100%;
   overflow: hidden;
   font-family: var(--font-sans);
-  background: var(--bg-base);
+  background:
+    radial-gradient(ellipse 55% 45% at 75% 25%, rgba(74,172,207,0.20) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 55% at 15% 75%, rgba(30,80,140,0.22) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 30% at 50% 50%, rgba(210,175,130,0.05) 0%, transparent 50%),
+    linear-gradient(160deg, #060A0E 0%, #0A1018 45%, #080C14 100%);
+  background-attachment: fixed;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }

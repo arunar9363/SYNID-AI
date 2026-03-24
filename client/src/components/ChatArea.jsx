@@ -95,7 +95,7 @@ function WelcomeScreen() {
   return (
     <div className="welcome">
       <div className="welcome-icon">
-        <img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+        <img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 60, height: 60, objectFit: 'contain' }} />
       </div>
       <h2 className="welcome-brand">SYNID AI</h2>
       <h1 className="welcome-title">{randomWelcome.tagline}</h1>
@@ -137,14 +137,14 @@ function WelcomeScreen() {
           animation: fadeIn 0.4s ease;
         }
         .welcome-icon {
-          width: 64px; height: 64px;
-          background: var(--accent-dim);
+          width: 5px; height: 5px;
+          background: var(--bg-elevated);
           border: 1px solid var(--accent-glow);
-          border-radius: 18px;
+          border-radius: 50px;
           display: flex; align-items: center; justify-content: center;
           color: var(--accent);
-          margin-bottom: 18px;
-          box-shadow: 0 0 30px var(--accent-dim);
+          margin-bottom: 40px;
+        
         }
         .welcome-title {
           font-size: 26px; font-weight: 700;

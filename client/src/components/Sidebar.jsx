@@ -18,16 +18,15 @@ function timeAgo(dateStr) {
 }
 
 const MODEL_DESCRIPTIONS = {
-  'llama-3.3-70b-versatile': '⭐ Best overall · Fast · Recommended',
-  'llama-3.1-8b-instant': '⚡ Fastest model · Simple tasks',
-  'llama3-70b-8192': '🔥 Powerful · Long context',
-  'llama3-8b-8192': '⚡ Fast & smart · Everyday use',
-  'gemma2-9b-it': '⚡ Google model · Balanced',
-  'mixtral-8x7b-32768': '🧠 Great reasoning · Long context',
-  'deepseek-r1-distill-llama-70b': '🧠 Deep thinking · Best reasoning',
-  'qwen-qwq-32b': '🧠 Strong reasoning · Analysis',
-  'meta-llama/llama-4-scout-17b-16e-instruct': '🔥 Llama 4 · Fast multimodal',
-  'meta-llama/llama-4-maverick-17b-128e-instruct': '🔥 Llama 4 · Best quality',
+  'llama-3.3-70b-versatile': '⭐ Balanced & Reliable · Best for coding and everyday tasks',
+
+  'meta-llama/llama-4-maverick-17b-128e-instruct': '🚀 Most Capable · Best for complex reasoning and AI agents',
+
+  'meta-llama/llama-4-scout-17b-16e-instruct': '⚡ Fast & Multimodal · Best for chat and long inputs',
+
+  'qwen-qwq-32b': '🧠 Reasoning Specialist · Best for math, logic, and analysis',
+
+  'mixtral-8x7b-32768': '📚 Long Context · Good for large documents and reasoning'
 };
 
 const KNOWN_MODELS = Object.keys(MODEL_DESCRIPTIONS);
@@ -99,7 +98,7 @@ export default function Sidebar() {
         {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div className="brand-icon"><Bot size={16} /></div>
+            <div className="brand-icon"><img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 30, height: 30, objectFit: 'contain' }} /></div>
             <span className="brand-name">SYNID AI</span>
           </div>
           <button className="icon-btn" onClick={() => setSidebarOpen(false)} title="Close sidebar">
@@ -126,26 +125,20 @@ export default function Sidebar() {
               >
                 <optgroup label="⭐ Recommended">
                   <option value="llama-3.3-70b-versatile">llama-3.3-70b — Best Overall</option>
-                  <option value="deepseek-r1-distill-llama-70b">deepseek-r1 — Best Reasoning</option>
-                  <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick — Latest</option>
+                  <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick — Most Capable</option>
                 </optgroup>
 
                 <optgroup label="⚡ Fast & Light">
-                  <option value="llama-3.1-8b-instant">llama-3.1-8b — Fastest</option>
-                  <option value="llama3-8b-8192">llama3-8b — Fast</option>
-                  <option value="gemma2-9b-it">gemma2-9b — Balanced</option>
                   <option value="meta-llama/llama-4-scout-17b-16e-instruct">llama-4-scout — Fast Multimodal</option>
                 </optgroup>
 
                 <optgroup label="🧠 Reasoning & Analysis">
-                  <option value="deepseek-r1-distill-llama-70b">deepseek-r1 — Deep Thinking</option>
                   <option value="qwen-qwq-32b">qwen-qwq-32b — Strong Reasoning</option>
                   <option value="mixtral-8x7b-32768">mixtral-8x7b — Long Context</option>
                 </optgroup>
 
                 <optgroup label="🔥 Large & Powerful">
                   <option value="llama-3.3-70b-versatile">llama-3.3-70b</option>
-                  <option value="llama3-70b-8192">llama3-70b — Long Context</option>
                   <option value="meta-llama/llama-4-maverick-17b-128e-instruct">llama-4-maverick</option>
                 </optgroup>
 
@@ -241,13 +234,13 @@ export default function Sidebar() {
         }
         .sidebar-brand { display: flex; align-items: center; gap: 9px; }
         .brand-icon {
-          width: 30px; height: 30px; border-radius: 8px;
+          width: 3px; height: 3px;
           background: var(--accent-dim);
           border: 1px solid var(--accent-glow);
           display: flex; align-items: center; justify-content: center;
           color: var(--accent);
         }
-        .brand-name { font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
+        .brand-name { font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; margin-left: 7px; }
         .new-chat-btn {
           margin: 12px 10px 4px;
           padding: 9px 14px;
