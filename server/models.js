@@ -8,6 +8,7 @@ const messageSchema = new mongoose.Schema({
 });
 
 const conversationSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
   title: { type: String, default: 'New Chat' },
   model: { type: String, default: 'llama3.2' },
   systemPrompt: { type: String, default: '' },
@@ -25,6 +26,7 @@ conversationSchema.pre('save', function (next) {
 });
 
 const personaSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
   name: { type: String, required: true },
   description: { type: String, default: '' },
   systemPrompt: { type: String, required: true },

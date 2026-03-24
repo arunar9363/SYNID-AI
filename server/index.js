@@ -8,7 +8,8 @@ dotenv.config();
 
 const app = express();
 app.use(cors({
-  origin: 'https://synidai.onrender.com'
+  origin: 'https://synidai.onrender.com',
+  exposedHeaders: ['x-user-id'],
 }));
 app.use(express.json());
 
@@ -36,6 +37,11 @@ const DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'llama-3.3-70b-versatile';
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB error:', err));
+
+// ── Middleware: extract userId from header ────────────────────────────────────
+function getUserId(req) {
+  return req.headers['x-user-id'] || 'anonymous';
+}
 
 // ── Helper: auto-generate title ───────────────────────────────────────────────
 async function generateTitle(content) {
@@ -68,7 +74,6 @@ async function generateTitle(content) {
 // ── GET /api/models ───────────────────────────────────────────────────────────
 app.get('/api/models', async (req, res) => {
   try {
-    // Groq ke available models return karo
     res.json(GROQ_MODELS);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -78,7 +83,8 @@ app.get('/api/models', async (req, res) => {
 // ── GET /api/conversations ────────────────────────────────────────────────────
 app.get('/api/conversations', async (req, res) => {
   try {
-    const convos = await Conversation.find({}, '-messages')
+    const userId = getUserId(req);
+    const convos = await Conversation.find({ userId }, '-messages')
       .sort({ pinned: -1, updatedAt: -1 })
       .limit(100);
     res.json(convos);
@@ -90,7 +96,8 @@ app.get('/api/conversations', async (req, res) => {
 // ── GET /api/conversations/:id ────────────────────────────────────────────────
 app.get('/api/conversations/:id', async (req, res) => {
   try {
-    const convo = await Conversation.findById(req.params.id);
+    const userId = getUserId(req);
+    const convo = await Conversation.findOne({ _id: req.params.id, userId });
     if (!convo) return res.status(404).json({ error: 'Not found' });
     res.json(convo);
   } catch (err) {
@@ -101,7 +108,8 @@ app.get('/api/conversations/:id', async (req, res) => {
 // ── POST /api/conversations ───────────────────────────────────────────────────
 app.post('/api/conversations', async (req, res) => {
   try {
-    const convo = new Conversation({ model: req.body.model || DEFAULT_MODEL });
+    const userId = getUserId(req);
+    const convo = new Conversation({ model: req.body.model || DEFAULT_MODEL, userId });
     await convo.save();
     res.json(convo);
   } catch (err) {
@@ -112,7 +120,12 @@ app.post('/api/conversations', async (req, res) => {
 // ── PATCH /api/conversations/:id ──────────────────────────────────────────────
 app.patch('/api/conversations/:id', async (req, res) => {
   try {
-    const convo = await Conversation.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const userId = getUserId(req);
+    const convo = await Conversation.findOneAndUpdate(
+      { _id: req.params.id, userId },
+      req.body,
+      { new: true }
+    );
     res.json(convo);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -122,7 +135,8 @@ app.patch('/api/conversations/:id', async (req, res) => {
 // ── DELETE /api/conversations/:id ─────────────────────────────────────────────
 app.delete('/api/conversations/:id', async (req, res) => {
   try {
-    await Conversation.findByIdAndDelete(req.params.id);
+    const userId = getUserId(req);
+    await Conversation.findOneAndDelete({ _id: req.params.id, userId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -132,7 +146,8 @@ app.delete('/api/conversations/:id', async (req, res) => {
 // ── DELETE /api/conversations ─────────────────────────────────────────────────
 app.delete('/api/conversations', async (req, res) => {
   try {
-    await Conversation.deleteMany({});
+    const userId = getUserId(req);
+    await Conversation.deleteMany({ userId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -142,6 +157,7 @@ app.delete('/api/conversations', async (req, res) => {
 // ── POST /api/chat (STREAMING with Groq) ─────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   const { conversationId, message, model, systemPrompt } = req.body;
+  const userId = getUserId(req);
 
   if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
 
@@ -154,13 +170,13 @@ app.post('/api/chat', async (req, res) => {
   const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
   try {
-    // Load or create conversation
+    // Load or create conversation — always scoped to userId
     let convo = conversationId
-      ? await Conversation.findById(conversationId)
+      ? await Conversation.findOne({ _id: conversationId, userId })
       : null;
 
     if (!convo) {
-      convo = new Conversation({ model: model || DEFAULT_MODEL });
+      convo = new Conversation({ model: model || DEFAULT_MODEL, userId });
     }
 
     const activeModel = model || convo.model || DEFAULT_MODEL;
@@ -250,9 +266,11 @@ app.post('/api/chat', async (req, res) => {
 // ── GET /api/search ───────────────────────────────────────────────────────────
 app.get('/api/search', async (req, res) => {
   try {
+    const userId = getUserId(req);
     const { q } = req.query;
     if (!q) return res.json([]);
     const results = await Conversation.find({
+      userId,
       $or: [
         { title: { $regex: q, $options: 'i' } },
         { 'messages.content': { $regex: q, $options: 'i' } },
@@ -267,7 +285,8 @@ app.get('/api/search', async (req, res) => {
 // ── GET /api/conversations/:id/export ─────────────────────────────────────────
 app.get('/api/conversations/:id/export', async (req, res) => {
   try {
-    const convo = await Conversation.findById(req.params.id);
+    const userId = getUserId(req);
+    const convo = await Conversation.findOne({ _id: req.params.id, userId });
     if (!convo) return res.status(404).json({ error: 'Not found' });
 
     const { format = 'markdown' } = req.query;
@@ -296,7 +315,9 @@ app.get('/api/conversations/:id/export', async (req, res) => {
 // ── PATCH /api/conversations/:id/pin ──────────────────────────────────────────
 app.patch('/api/conversations/:id/pin', async (req, res) => {
   try {
-    const convo = await Conversation.findById(req.params.id);
+    const userId = getUserId(req);
+    const convo = await Conversation.findOne({ _id: req.params.id, userId });
+    if (!convo) return res.status(404).json({ error: 'Not found' });
     convo.pinned = !convo.pinned;
     await convo.save();
     res.json({ pinned: convo.pinned });
@@ -308,7 +329,9 @@ app.patch('/api/conversations/:id/pin', async (req, res) => {
 // ── DELETE /api/conversations/:id/messages ────────────────────────────────────
 app.delete('/api/conversations/:id/messages', async (req, res) => {
   try {
-    const convo = await Conversation.findById(req.params.id);
+    const userId = getUserId(req);
+    const convo = await Conversation.findOne({ _id: req.params.id, userId });
+    if (!convo) return res.status(404).json({ error: 'Not found' });
     convo.messages = [];
     convo.title = 'New Chat';
     await convo.save();
@@ -320,13 +343,16 @@ app.delete('/api/conversations/:id/messages', async (req, res) => {
 
 // ── PERSONA ROUTES ────────────────────────────────────────────────────────────
 app.get('/api/personas', async (req, res) => {
-  try { res.json(await Persona.find().sort({ createdAt: -1 })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  try {
+    const userId = getUserId(req);
+    res.json(await Persona.find({ userId }).sort({ createdAt: -1 }));
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/personas', async (req, res) => {
   try {
-    const p = new Persona(req.body);
+    const userId = getUserId(req);
+    const p = new Persona({ ...req.body, userId });
     await p.save();
     res.json(p);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -334,7 +360,8 @@ app.post('/api/personas', async (req, res) => {
 
 app.delete('/api/personas/:id', async (req, res) => {
   try {
-    await Persona.findByIdAndDelete(req.params.id);
+    const userId = getUserId(req);
+    await Persona.findOneAndDelete({ _id: req.params.id, userId });
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

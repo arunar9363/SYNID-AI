@@ -1,7 +1,24 @@
 import axios from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://synid-ai.onrender.com';
+
+// ── Get or create a unique user ID stored in localStorage ────────────────────
+export function getUserId() {
+  let uid = localStorage.getItem('synid_user_id');
+  if (!uid) {
+    uid = 'user_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('synid_user_id', uid);
+  }
+  return uid;
+}
+
 const api = axios.create({ baseURL: `${BASE_URL}/api` });
+
+// ── Attach userId to every request automatically ──────────────────────────────
+api.interceptors.request.use(config => {
+  config.headers['x-user-id'] = getUserId();
+  return config;
+});
 
 export const getModels = () => api.get('/models').then(r => r.data);
 export const getConversations = () => api.get('/conversations').then(r => r.data);
@@ -27,7 +44,10 @@ export async function streamChat({ conversationId, message, model, systemPrompt,
   try {
     const response = await fetch(`${BASE_URL}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': getUserId(),
+      },
       body: JSON.stringify({ conversationId, message, model, systemPrompt, images }),
     });
 
