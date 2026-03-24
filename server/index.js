@@ -7,7 +7,9 @@ import { Conversation, Persona } from './models.js';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'https://synidai.onrender.com'
+}));
 app.use(express.json());
 
 // ── Groq Config ───────────────────────────────────────────────────────────────
