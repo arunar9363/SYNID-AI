@@ -63,7 +63,7 @@ export default function Message({ message, onEdit, onRegenerate, isLast }) {
       onMouseLeave={() => setHovered(false)}
     >
       <div className="msg-avatar">
-        {isUser ? <User size={14} /> : <Bot size={14} />}
+        {isUser ? <User size={14} /> : <img src="/assets/synidailogo.png" alt="SYNID AI" style={{ width: 30, height: 30, objectFit: 'contain' }} />}
       </div>
 
       <div className="msg-bubble">
