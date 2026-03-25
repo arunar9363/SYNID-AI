@@ -13,10 +13,10 @@
 [![Groq](https://img.shields.io/badge/Groq-F55036?style=flat&logo=groq&logoColor=white)](https://groq.com)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev)
 
-**A full-stack AI chat application powered by Groq's ultra-fast inference API.**  
-No local hardware required. No subscriptions. Your conversations stay private in your own database.
+**A full-stack AI chat application I built, powered by Groq's ultra-fast inference API.**  
+No local hardware required. No subscriptions. Conversations stay private in my own database.
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Models](#-supported-models) • [API Docs](#-api-endpoints) • [Project Structure](#-project-structure) • [Contributing](#-contributing)
+[Features](#-features) • [Quick Start](#-quick-start) • [Models](#-supported-models) • [API Docs](#-api-endpoints) • [Project Structure](#-project-structure)
 
 </div>
 
@@ -24,15 +24,15 @@ No local hardware required. No subscriptions. Your conversations stay private in
 
 ## 📌 What is SYNID AI?
 
-**SYNID AI** is an open-source, self-hosted AI chat application built with the MERN stack. It uses [Groq](https://groq.com) to run state-of-the-art large language models at lightning speed — giving you a premium ChatGPT-like experience with complete control over your data and zero ongoing cost.
+**SYNID AI** is a self-hosted AI chat application I built using the MERN stack. I integrated [Groq](https://groq.com) to run large language models at high speed — giving a premium ChatGPT-like experience with full control over data and no ongoing costs.
 
-> 💡 Built for developers, students, and privacy-conscious users who want the power of AI without handing their data to big tech companies.
+> 💡 I built this for myself as a developer — I wanted the power of AI without sending my data to third-party platforms.
 
-**Key differences from the original:**
-- 🔥 **Groq-powered** — blazing fast inference via Groq's API (no local GPU needed)
-- 🧠 **SYNID AI identity** — the AI always introduces itself as SYNID AI, not the underlying model
-- 💬 **Chat only** — clean, focused chat experience with no image upload complexity
-- ☁️ **Cloud-deployable** — runs on Render, Railway, or any Node.js host
+**What makes it different from other AI chat apps:**
+- 🔥 **Groq-powered** — blazing fast inference via Groq's API, no local GPU needed
+- 🧠 **SYNID AI identity** — the AI always presents itself as SYNID AI, not the underlying model
+- 💬 **Chat focused** — clean, distraction-free chat experience
+- ☁️ **Cloud-deployable** — I have it running on Render
 
 ---
 
@@ -49,22 +49,22 @@ No local hardware required. No subscriptions. Your conversations stay private in
 
 ### 🗂️ Conversation Management
 - **Persistent chat history** — all conversations saved in MongoDB, scoped per user
-- **Rename & delete** — full control over your chat history
+- **Rename & delete** — full control over chat history
 - **Pin conversations** — keep important chats at the top
 - **Search** — full-text search across all conversations and messages
 - **Export** — download any chat as Markdown or JSON
 - **Clear messages** — wipe a chat without deleting the conversation
 
 ### 🤖 AI Customization
-- **System prompts** — set custom instructions for any conversation
+- **System prompts** — set custom instructions per conversation
 - **Personas** — built-in AI personalities (Developer, Writer, Teacher, Researcher, Business, Friendly)
-- **Custom personas** — create and save your own AI personalities
+- **Custom personas** — create and save my own AI personalities
 - **SYNID identity always active** — custom system prompts layer on top of the SYNID AI base identity
 
 ### 📝 Input
 - **Prompt templates** — 20+ ready-made templates across 5 categories (Coding, Writing, Learning, Analysis, Creative)
-- **Welcome screen suggestions** — 8 quick-start suggestion cards on the home screen
-- **Character counter** — warns when approaching context limits (8,000 char soft limit)
+- **Welcome screen suggestions** — quick-start suggestion cards on the home screen
+- **Character counter** — warns when approaching context limits
 - **Auto-resizing textarea** — input grows as you type, up to 220px
 
 ### ✏️ Messages
@@ -74,13 +74,11 @@ No local hardware required. No subscriptions. Your conversations stay private in
 - **React to messages** — thumbs up / thumbs down rating
 
 ### 🎨 UI & UX
-- **SYNID branded dark theme** — deep navy palette matched to the SYNID AI logo colors
+- **SYNID branded dark theme** — deep navy palette matched to the SYNID AI logo
 - **Mobile responsive** — works on phones and tablets with collapsible sidebar
-- **Collapsible sidebar** — maximize writing space
-- **Live token counter** — see estimated context window usage in real time
+- **Live token counter** — estimated context window usage in real time
 - **Keyboard shortcuts** — `N` new chat · `Ctrl+K` search
-- **Generating indicator** — live pulsing badge while AI is thinking
-- **Per-user isolation** — each browser gets a unique `userId` via localStorage, conversations are fully scoped
+- **Per-user isolation** — each browser gets a unique `userId` via localStorage
 
 ---
 
@@ -91,7 +89,7 @@ No local hardware required. No subscriptions. Your conversations stay private in
 | Frontend | React 18 + Vite | Fast, modern UI |
 | Styling | Pure CSS + CSS Variables | No heavy CSS framework |
 | Markdown | react-markdown + remark-gfm | GitHub-flavored markdown |
-| Syntax | react-syntax-highlighter | Beautiful code blocks |
+| Syntax | react-syntax-highlighter | Code blocks |
 | Icons | lucide-react | Clean, consistent icons |
 | HTTP Client | Axios | API calls |
 | Backend | Node.js + Express | REST API + SSE streaming |
@@ -166,7 +164,7 @@ http://localhost:3000
 
 ## 🚀 One-Click Start (Windows)
 
-Create a `start.bat` file in the project root:
+I use this `start.bat` file in the project root to launch everything at once:
 
 ```bat
 @echo off
@@ -178,31 +176,29 @@ timeout /t 4
 start http://localhost:3000
 ```
 
-Double-click it every time you want to use the app.
-
 ---
 
-## ☁️ Deploying to Render (Free)
+## ☁️ Deploying to Render
 
-SYNID AI is built and deployed on [Render](https://render.com). Here's how:
+I deployed SYNID AI on [Render](https://render.com). Here's how I set it up:
 
 ### Backend (Web Service)
-1. Push your `server/` folder to GitHub
-2. Create a new **Web Service** on Render
-3. Set build command: `npm install`
-4. Set start command: `node index.js`
-5. Add environment variables:
-   - `MONGODB_URI` — your MongoDB Atlas connection string
-   - `GROQ_API_KEY` — your Groq API key
+1. Pushed `server/` to GitHub
+2. Created a new **Web Service** on Render
+3. Build command: `npm install`
+4. Start command: `node index.js`
+5. Environment variables:
+   - `MONGODB_URI` — MongoDB Atlas connection string
+   - `GROQ_API_KEY` — Groq API key
    - `PORT` — `5000`
 
 ### Frontend (Static Site)
-1. Push your `client/` folder to GitHub
-2. Create a new **Static Site** on Render
-3. Set build command: `npm install && npm run build`
-4. Set publish directory: `dist`
-5. Add environment variable:
-   - `VITE_API_URL` — your backend Render URL (e.g. `https://synid-ai.onrender.com`)
+1. Pushed `client/` to GitHub
+2. Created a new **Static Site** on Render
+3. Build command: `npm install && npm run build`
+4. Publish directory: `dist`
+5. Environment variable:
+   - `VITE_API_URL` — backend Render URL (e.g. `https://synid-ai.onrender.com`)
 
 ---
 
@@ -217,7 +213,7 @@ GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx
 DEFAULT_MODEL=llama-3.3-70b-versatile
 ```
 
-### Use MongoDB Atlas (Cloud Database)
+### MongoDB Atlas (Cloud Database)
 
 ```env
 MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/synid-ai
@@ -225,7 +221,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/synid-ai
 
 ### Frontend API URL
 
-In `client/.env` (or Render environment variables):
+In `client/.env`:
 
 ```env
 VITE_API_URL=https://your-backend.onrender.com
@@ -235,20 +231,18 @@ VITE_API_URL=https://your-backend.onrender.com
 
 ## 🧠 Supported Models
 
-All models are served via Groq's API — no local download required.
+All models run via Groq's API — no local download needed.
 
 | Model | Best For |
 |-------|----------|
 | `llama-3.3-70b-versatile` | ⭐ Best overall — coding and everyday tasks |
-| `meta-llama/llama-4-maverick-17b-128e-instruct` | 🚀 Most capable — complex reasoning and AI agents |
+| `meta-llama/llama-4-maverick-17b-128e-instruct` | 🚀 Most capable — complex reasoning |
 | `meta-llama/llama-4-scout-17b-16e-instruct` | ⚡ Fast — chat and long inputs |
 | `qwen-qwq-32b` | 🧠 Reasoning — math, logic, and analysis |
 | `mixtral-8x7b-32768` | 📚 Long context — large documents |
 | `llama-3.1-8b-instant` | ⚡ Ultra-fast — quick answers |
 | `gemma2-9b-it` | 🟢 Efficient — general use |
 | `deepseek-r1-distill-llama-70b` | 🔬 Deep reasoning |
-
-Switch between models any time from the sidebar dropdown — no restart required.
 
 ---
 
@@ -257,7 +251,7 @@ Switch between models any time from the sidebar dropdown — no restart required
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/models` | List all available Groq models |
-| `GET` | `/api/conversations` | Get all conversations (scoped to user) |
+| `GET` | `/api/conversations` | Get all conversations |
 | `GET` | `/api/conversations/:id` | Get single conversation with messages |
 | `POST` | `/api/conversations` | Create new conversation |
 | `PATCH` | `/api/conversations/:id` | Rename or update conversation |
@@ -331,37 +325,10 @@ synid-ai/
 
 ## 🔒 Privacy
 
-- **Your database** — all conversations stored in your own MongoDB instance
+- **My own database** — all conversations stored in my own MongoDB instance
 - **Per-user isolation** — each browser session gets its own scoped user ID
 - **No tracking** — zero analytics, no third-party telemetry
-- **Open source** — read every line of code yourself
-- **Groq API** — only the message content is sent to Groq for inference; no conversation history is stored by Groq beyond the request
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-```bash
-# Fork the repo, then:
-git clone https://github.com/yourusername/synid-ai.git
-git checkout -b feature/your-feature-name
-# make your changes
-git commit -m "Add: your feature description"
-git push origin feature/your-feature-name
-# Open a Pull Request
-```
-
-### Ideas for contributions
-- [ ] User authentication (JWT login/signup)
-- [ ] Multiple chat folders / workspaces
-- [ ] Voice input / text-to-speech output
-- [ ] RAG — chat with your own PDF documents
-- [ ] Web search tool integration
-- [ ] Mobile app (React Native)
-- [ ] Docker Compose setup
-- [ ] Streaming abort / stop generation button
+- **Groq API** — only the message content is sent to Groq for inference
 
 ---
 
@@ -384,7 +351,5 @@ MIT License — free to use, modify, and distribute.
 <div align="center">
 
 **Made with ❤️ by Arun Pratap Singh**
-
-⭐ Star this repo if you found it useful!
 
 </div>
