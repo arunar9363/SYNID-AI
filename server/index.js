@@ -24,13 +24,26 @@ const GROQ_API_KEYS = [
 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
-// ── Get a random Groq API key on every call ───────────────────────────────────
+// ── Round-robin index tracker ─────────────────────────────────────────────────
+let groqKeyIndex = 0;
+
+// ── Get next Groq API key using round-robin (not random) ─────────────────────
 function getGroqApiKey() {
   if (GROQ_API_KEYS.length === 0) {
     throw new Error('No Groq API keys configured');
   }
-  const randomIndex = Math.floor(Math.random() * GROQ_API_KEYS.length);
-  return GROQ_API_KEYS[randomIndex];
+  const key = GROQ_API_KEYS[groqKeyIndex % GROQ_API_KEYS.length];
+  groqKeyIndex++;
+  return key;
+}
+
+// ── Mark a key as invalid — remove it from the pool permanently ───────────────
+function removeInvalidKey(badKey) {
+  const idx = GROQ_API_KEYS.indexOf(badKey);
+  if (idx !== -1) {
+    GROQ_API_KEYS.splice(idx, 1);
+    console.warn(`⚠️ Removed invalid Groq API key. Remaining keys: ${GROQ_API_KEYS.length}`);
+  }
 }
 
 // ── Available Groq Models ─────────────────────────────────────────────────────
@@ -238,12 +251,13 @@ app.post('/api/chat', async (req, res) => {
       ...convo.messages.map(m => ({ role: m.role, content: m.content })),
     ];
 
-    // ── Stream from Groq ──────────────────────────────────────────────────────
+    // ── Stream from Groq (with invalid key auto-removal) ────────────────────────
+    const usedKey = getGroqApiKey();
     const groqRes = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getGroqApiKey()}`,
+        'Authorization': `Bearer ${usedKey}`,
       },
       body: JSON.stringify({
         model: activeModel,
@@ -255,6 +269,10 @@ app.post('/api/chat', async (req, res) => {
 
     if (!groqRes.ok) {
       const errData = await groqRes.json();
+      // If key is invalid, remove it from pool so it never gets used again
+      if (groqRes.status === 401) {
+        removeInvalidKey(usedKey);
+      }
       throw new Error(errData.error?.message || groqRes.statusText);
     }
 
