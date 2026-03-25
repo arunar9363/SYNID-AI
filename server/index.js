@@ -14,8 +14,24 @@ app.use(cors({
 app.use(express.json());
 
 // ── Groq Config ───────────────────────────────────────────────────────────────
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const GROQ_API_KEYS = [
+  process.env.GROQ_API_KEY_1,
+  process.env.GROQ_API_KEY_2,
+  process.env.GROQ_API_KEY_3,
+  process.env.GROQ_API_KEY_4,
+  process.env.GROQ_API_KEY_5,
+].filter(Boolean); // Remove any undefined/empty keys
+
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+
+// ── Get a random Groq API key on every call ───────────────────────────────────
+function getGroqApiKey() {
+  if (GROQ_API_KEYS.length === 0) {
+    throw new Error('No Groq API keys configured');
+  }
+  const randomIndex = Math.floor(Math.random() * GROQ_API_KEYS.length);
+  return GROQ_API_KEYS[randomIndex];
+}
 
 // ── Available Groq Models ─────────────────────────────────────────────────────
 const GROQ_MODELS = [
@@ -75,7 +91,7 @@ async function generateTitle(content) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${getGroqApiKey()}`,
       },
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
@@ -227,7 +243,7 @@ app.post('/api/chat', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${getGroqApiKey()}`,
       },
       body: JSON.stringify({
         model: activeModel,
