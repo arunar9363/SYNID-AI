@@ -366,7 +366,7 @@ export default function Sidebar() {
           width: 100%;
           display: flex; align-items: center; justify-content: space-between;
           padding: 8px 12px;
-          background: var(--accent-dim);
+          background: var(--accent);
           border: 1px solid var(--border);
           border-radius: 8px;
           color: var(--text-primary);
