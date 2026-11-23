@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# The synid-ai web service must run the session API with APP_ORIGIN=https://synidai.onrender.com.
+services:
+  - type: web
+    name: synidai
+    runtime: static
+    rootDir: client
+    buildCommand: npm ci --include=dev && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://synid-ai.onrender.com/api/*
