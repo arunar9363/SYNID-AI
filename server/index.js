@@ -1,437 +1,66 @@
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
-import { Conversation, Persona } from './models.js';
+import mongoose from 'mongoose';
+import { createApp } from './app.js';
+import { createGroq } from './groq.js';
 
-dotenv.config();
+dotenv.config({ path: fileURLToPath(new URL('.env', import.meta.url)) });
 
-const app = express();
-app.use(cors({
-  origin: 'https://synidai.onrender.com',
-  exposedHeaders: ['x-user-id'],
-}));
-app.use(express.json());
+async function start() {
+  const { MONGODB_URI, NODE_ENV, APP_ORIGIN, DEFAULT_MODEL, GROQ_CHAT_MODELS } = process.env;
+  const port = Number(process.env.PORT || 5000);
+  const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
+  const production = NODE_ENV === 'production';
+  if (!MONGODB_URI) throw new Error('Set MONGODB_URI before starting the server.');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Set PORT to a valid port number.');
+  if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0) throw new Error('Set TRUST_PROXY_HOPS to a nonnegative integer.');
 
-// ── Groq Config ───────────────────────────────────────────────────────────────
-const GROQ_API_KEYS = [
-  process.env.GROQ_API_KEY_1,
-  process.env.GROQ_API_KEY_2,
-  process.env.GROQ_API_KEY_3,
-  process.env.GROQ_API_KEY_4,
-  process.env.GROQ_API_KEY_5,
-].filter(Boolean); // Remove any undefined/empty keys
-
-const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
-
-// ── Round-robin index tracker ─────────────────────────────────────────────────
-let groqKeyIndex = 0;
-
-// ── Get next Groq API key using round-robin (not random) ─────────────────────
-function getGroqApiKey() {
-  if (GROQ_API_KEYS.length === 0) {
-    throw new Error('No Groq API keys configured');
+  let publicOrigin;
+  if (APP_ORIGIN) {
+    const parsed = URL.parse(APP_ORIGIN);
+    const validProtocol = parsed?.protocol === 'https:' || (!production && parsed?.protocol === 'http:');
+    if (!validProtocol || (parsed.origin !== APP_ORIGIN.replace(/\/$/, ''))) {
+      throw new Error('Set APP_ORIGIN to the site origin, including the scheme and hostname.');
+    }
+    publicOrigin = parsed.origin;
   }
-  const key = GROQ_API_KEYS[groqKeyIndex % GROQ_API_KEYS.length];
-  groqKeyIndex++;
-  return key;
-}
 
-// ── Mark a key as invalid — remove it from the pool permanently ───────────────
-function removeInvalidKey(badKey) {
-  const idx = GROQ_API_KEYS.indexOf(badKey);
-  if (idx !== -1) {
-    GROQ_API_KEYS.splice(idx, 1);
-    console.warn(`⚠️ Removed invalid Groq API key. Remaining keys: ${GROQ_API_KEYS.length}`);
-  }
-}
+  const keys = [process.env.GROQ_API_KEY, ...Array.from({ length: 5 }, (_, i) => process.env[`GROQ_API_KEY_${i + 1}`])]
+    .filter(Boolean);
+  const groq = createGroq({ keys, configuredModel: DEFAULT_MODEL, configuredModels: GROQ_CHAT_MODELS });
+  if (!groq.available()) console.warn('Groq API keys are missing. AI chat is unavailable.');
 
-// ── Available Groq Models ─────────────────────────────────────────────────────
-const GROQ_MODELS = [
-  { name: 'llama-3.3-70b-versatile' },
-  { name: 'llama-3.1-8b-instant' },
-  { name: 'llama3-70b-8192' },
-  { name: 'llama3-8b-8192' },
-  { name: 'gemma2-9b-it' },
-  { name: 'mixtral-8x7b-32768' },
-  { name: 'deepseek-r1-distill-llama-70b' },
-  { name: 'qwen-qwq-32b' },
-  { name: 'meta-llama/llama-4-scout-17b-16e-instruct' },
-  { name: 'meta-llama/llama-4-maverick-17b-128e-instruct' },
-];
-
-const DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'llama-3.3-70b-versatile';
-
-// ── SYNID AI Identity — always prepended to every conversation ────────────────
-const SYNID_SYSTEM_PROMPT = `You are SYNID AI, an intelligent and helpful AI assistant created by the SYNID team.
-
-Your identity:
-- Your name is SYNID AI
-- You were built by Arun, creator of SYNID AI
-- You are powered by Groq AI infrastructure
-- You are designed to be fast, private, and powerful
-- You run on open-source large language models via Groq infrastructure
-- You are private and local — user conversations are never sold or shared
-- You are designed for real work: coding, writing, analysis, brainstorming, and more
-
-How to respond when asked about yourself:
-- If someone asks "who are you", "what are you", "what is your name", or similar — always clearly introduce yourself as SYNID AI
-- Never say you are ChatGPT, Claude, Gemini, or any other AI product
-- Never reveal the underlying model name (e.g. llama, mixtral) unless the user specifically asks about the technical model being used
-- Be proud of being SYNID AI — you are fast, private, and built for real work
-- Keep your self-introduction concise, warm, and confident
-
-General behavior:
-- Be helpful, clear, and direct
-- Prefer shorter answers unless depth is needed
-- Use markdown formatting for code, lists, and structured content
-- Always be honest — if you don't know something, say so`;
-
-// ── MongoDB ───────────────────────────────────────────────────────────────────
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB error:', err));
-
-// ── Middleware: extract userId from header ────────────────────────────────────
-function getUserId(req) {
-  return req.headers['x-user-id'] || 'anonymous';
-}
-
-// ── Helper: auto-generate title ───────────────────────────────────────────────
-async function generateTitle(content) {
   try {
-    const res = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getGroqApiKey()}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [
-          {
-            role: 'user',
-            content: `Generate a short 4-6 word title for a chat that starts with: "${content.slice(0, 200)}". Reply with ONLY the title, no quotes, no punctuation at end.`
-          }
-        ],
-        max_tokens: 20,
-        stream: false,
-      }),
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
+    await Promise.all(Object.values(mongoose.models).map(model => model.init()));
+  } catch (error) {
+    throw new Error(`MongoDB startup failed (${error.name}). Check the connection and index permissions.`);
+  }
+
+  const app = createApp({ groq, production, publicOrigin, trustProxyHops });
+  const server = app.listen(port, () => console.log(`SYNID AI is listening on port ${port}.`));
+  server.headersTimeout = 15_000;
+  server.requestTimeout = 30_000;
+  server.once('error', error => {
+    console.error(`HTTP server failed (${error.code || error.name}).`);
+    process.exitCode = 1;
+    void mongoose.disconnect();
+  });
+
+  const shutdown = () => {
+    const forceClose = setTimeout(() => server.closeAllConnections(), 10_000);
+    forceClose.unref();
+    server.close(async () => {
+      clearTimeout(forceClose);
+      await mongoose.disconnect();
     });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || 'New Chat';
-  } catch {
-    return 'New Chat';
-  }
+  };
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
 }
 
-// ── GET /api/models ───────────────────────────────────────────────────────────
-app.get('/api/models', async (req, res) => {
-  try {
-    res.json(GROQ_MODELS);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── GET /api/conversations ────────────────────────────────────────────────────
-app.get('/api/conversations', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const convos = await Conversation.find({ userId }, '-messages')
-      .sort({ pinned: -1, updatedAt: -1 })
-      .limit(100);
-    res.json(convos);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── GET /api/conversations/:id ────────────────────────────────────────────────
-app.get('/api/conversations/:id', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const convo = await Conversation.findOne({ _id: req.params.id, userId });
-    if (!convo) return res.status(404).json({ error: 'Not found' });
-    res.json(convo);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── POST /api/conversations ───────────────────────────────────────────────────
-app.post('/api/conversations', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const convo = new Conversation({ model: req.body.model || DEFAULT_MODEL, userId });
-    await convo.save();
-    res.json(convo);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── PATCH /api/conversations/:id ──────────────────────────────────────────────
-app.patch('/api/conversations/:id', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const convo = await Conversation.findOneAndUpdate(
-      { _id: req.params.id, userId },
-      req.body,
-      { new: true }
-    );
-    res.json(convo);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── DELETE /api/conversations/:id ─────────────────────────────────────────────
-app.delete('/api/conversations/:id', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    await Conversation.findOneAndDelete({ _id: req.params.id, userId });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── DELETE /api/conversations ─────────────────────────────────────────────────
-app.delete('/api/conversations', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    await Conversation.deleteMany({ userId });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── POST /api/chat (STREAMING with Groq) ─────────────────────────────────────
-app.post('/api/chat', async (req, res) => {
-  const { conversationId, message, model, systemPrompt } = req.body;
-  const userId = getUserId(req);
-
-  if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
-
-  // SSE headers
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
-
-  try {
-    // Load or create conversation — always scoped to userId
-    let convo = conversationId
-      ? await Conversation.findOne({ _id: conversationId, userId })
-      : null;
-
-    if (!convo) {
-      convo = new Conversation({ model: model || DEFAULT_MODEL, userId });
-    }
-
-    const activeModel = model || convo.model || DEFAULT_MODEL;
-    const activeSystemPrompt = systemPrompt ?? convo.systemPrompt ?? '';
-
-    // Add user message
-    convo.messages.push({ role: 'user', content: message });
-    send({ type: 'conversation_id', id: convo._id.toString() });
-
-    // Build messages for Groq
-    // Always prepend SYNID AI identity. If user has a custom system prompt, append it after.
-    const mergedSystemPrompt = activeSystemPrompt
-      ? `${SYNID_SYSTEM_PROMPT}\n\n---\n\nAdditional instructions:\n${activeSystemPrompt}`
-      : SYNID_SYSTEM_PROMPT;
-
-    const groqMessages = [
-      { role: 'system', content: mergedSystemPrompt },
-      ...convo.messages.map(m => ({ role: m.role, content: m.content })),
-    ];
-
-    // ── Stream from Groq (with invalid key auto-removal) ────────────────────────
-    const usedKey = getGroqApiKey();
-    const groqRes = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${usedKey}`,
-      },
-      body: JSON.stringify({
-        model: activeModel,
-        messages: groqMessages,
-        stream: true,
-        max_tokens: 8192,
-      }),
-    });
-
-    if (!groqRes.ok) {
-      const errData = await groqRes.json();
-      // If key is invalid, remove it from pool so it never gets used again
-      if (groqRes.status === 401) {
-        removeInvalidKey(usedKey);
-      }
-      throw new Error(errData.error?.message || groqRes.statusText);
-    }
-
-    let fullResponse = '';
-    const reader = groqRes.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n').filter(l => l.trim() && l !== 'data: [DONE]');
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        try {
-          const json = JSON.parse(line.slice(6));
-          const content = json.choices?.[0]?.delta?.content;
-          if (content) {
-            fullResponse += content;
-            send({ type: 'chunk', content });
-          }
-          if (json.choices?.[0]?.finish_reason === 'stop') {
-            send({ type: 'done' });
-          }
-        } catch { /* skip malformed lines */ }
-      }
-    }
-
-    // Save assistant message
-    convo.messages.push({ role: 'assistant', content: fullResponse });
-
-    // Update system prompt if provided
-    if (systemPrompt !== undefined) convo.systemPrompt = systemPrompt;
-
-    // Auto-generate title from first exchange
-    if (convo.messages.length === 2) {
-      convo.title = await generateTitle(message);
-    }
-
-    convo.model = activeModel;
-    await convo.save();
-
-    send({ type: 'title', title: convo.title });
-    res.end();
-
-  } catch (err) {
-    console.error(err);
-    send({ type: 'error', message: err.message });
-    res.end();
-  }
-});
-
-// ── GET /api/search ───────────────────────────────────────────────────────────
-app.get('/api/search', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const { q } = req.query;
-    if (!q) return res.json([]);
-    const results = await Conversation.find({
-      userId,
-      $or: [
-        { title: { $regex: q, $options: 'i' } },
-        { 'messages.content': { $regex: q, $options: 'i' } },
-      ]
-    }, '-messages').limit(20).sort({ updatedAt: -1 });
-    res.json(results);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── GET /api/conversations/:id/export ─────────────────────────────────────────
-app.get('/api/conversations/:id/export', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const convo = await Conversation.findOne({ _id: req.params.id, userId });
-    if (!convo) return res.status(404).json({ error: 'Not found' });
-
-    const { format = 'markdown' } = req.query;
-
-    if (format === 'json') {
-      res.setHeader('Content-Disposition', `attachment; filename="${convo.title}.json"`);
-      res.setHeader('Content-Type', 'application/json');
-      return res.json(convo);
-    }
-
-    let md = `# ${convo.title}\n\n`;
-    md += `**Model:** ${convo.model}  \n`;
-    md += `**Date:** ${new Date(convo.createdAt).toLocaleString()}  \n\n---\n\n`;
-    for (const msg of convo.messages) {
-      md += `### ${msg.role === 'user' ? '👤 You' : '🤖 Assistant'}\n\n`;
-      md += `${msg.content}\n\n`;
-    }
-    res.setHeader('Content-Disposition', `attachment; filename="${convo.title}.md"`);
-    res.setHeader('Content-Type', 'text/markdown');
-    res.send(md);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── PATCH /api/conversations/:id/pin ──────────────────────────────────────────
-app.patch('/api/conversations/:id/pin', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const convo = await Conversation.findOne({ _id: req.params.id, userId });
-    if (!convo) return res.status(404).json({ error: 'Not found' });
-    convo.pinned = !convo.pinned;
-    await convo.save();
-    res.json({ pinned: convo.pinned });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── DELETE /api/conversations/:id/messages ────────────────────────────────────
-app.delete('/api/conversations/:id/messages', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const convo = await Conversation.findOne({ _id: req.params.id, userId });
-    if (!convo) return res.status(404).json({ error: 'Not found' });
-    convo.messages = [];
-    convo.title = 'New Chat';
-    await convo.save();
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ── PERSONA ROUTES ────────────────────────────────────────────────────────────
-app.get('/api/personas', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    res.json(await Persona.find({ userId }).sort({ createdAt: -1 }));
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/personas', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    const p = new Persona({ ...req.body, userId });
-    await p.save();
-    res.json(p);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.delete('/api/personas/:id', async (req, res) => {
-  try {
-    const userId = getUserId(req);
-    await Persona.findOneAndDelete({ _id: req.params.id, userId });
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ── Start Server ──────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+start().catch(async error => {
+  console.error(error.message);
+  process.exitCode = 1;
+  await mongoose.disconnect();
 });

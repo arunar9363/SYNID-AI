@@ -1,49 +1,57 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X, MessageSquare, Clock } from 'lucide-react';
-import { searchConversations } from '../utils/api';
+import { useChat } from '../context/ChatContext';
 
 export default function SearchModal({ onClose, onSelect }) {
+  const { api } = useChat();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
   const inputRef = useRef(null);
-  const timerRef = useRef(null);
+  const search = query.trim();
+  const current = result?.query === search ? result : null;
+  const loading = Boolean(search) && !current;
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   useEffect(() => {
-    clearTimeout(timerRef.current);
-    if (!query.trim()) { setResults([]); return; }
-    setLoading(true);
-    timerRef.current = setTimeout(async () => {
-      const r = await searchConversations(query);
-      setResults(r);
-      setLoading(false);
-    }, 300);
-  }, [query]);
+    if (!search) return;
+    const controller = new AbortController();
+    const task = setTimeout(async () => {
+      try {
+        const items = await api.searchConversations(search, controller.signal);
+        if (!controller.signal.aborted) setResult({ query: search, items });
+      } catch (error) {
+        if (!controller.signal.aborted) setResult({ query: search, error: error.message });
+      }
+    }, 250);
+    return () => { clearTimeout(task); controller.abort(); };
+  }, [api, search]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="search-modal" onClick={e => e.stopPropagation()}>
+      <div className="search-modal" role="dialog" aria-modal="true" aria-label="Search conversations" onClick={e => e.stopPropagation()}>
         <div className="search-input-row">
           <Search size={16} className="search-icon" />
           <input
             ref={inputRef}
             className="search-input"
-            placeholder="Search conversations..."
+            placeholder="Search conversations"
+            aria-label="Search conversations"
+            maxLength={160}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Escape' && onClose()}
           />
-          {query && <button className="clear-search" onClick={() => setQuery('')}><X size={14} /></button>}
+          <button className="clear-search" title="Close search" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="search-results">
-          {loading && <div className="search-loading">Searching...</div>}
-          {!loading && query && results.length === 0 && (
-            <div className="search-empty">No conversations found for "{query}"</div>
+          {loading && <div className="search-loading" role="status">Searching…</div>}
+          {current?.error && <div className="search-empty form-error" role="alert">{current.error}</div>}
+          {current?.items?.length === 0 && (
+            <div className="search-empty">No conversations match “{search}”</div>
           )}
-          {results.map(r => (
+          {current?.items?.map(r => (
             <button key={r._id} className="search-result" onClick={() => { onSelect(r._id); onClose(); }}>
               <MessageSquare size={14} className="result-icon" />
               <div className="result-info">
@@ -55,10 +63,10 @@ export default function SearchModal({ onClose, onSelect }) {
               </div>
             </button>
           ))}
-          {!query && (
+          {!search && (
             <div className="search-hint">
               <Search size={28} />
-              <p>Search through all your past conversations</p>
+              <p>Search chat titles and messages</p>
             </div>
           )}
         </div>

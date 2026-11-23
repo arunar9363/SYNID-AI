@@ -651,13 +651,14 @@ export default function TemplatesModal({ onClose, onSelect }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="tpl-modal" onClick={e => e.stopPropagation()}>
+      <div className="tpl-modal" role="dialog" aria-modal="true" aria-labelledby="templates-title"
+        onClick={e => e.stopPropagation()} onKeyDown={e => { if (e.key === 'Escape') onClose(); }}>
         <div className="tpl-header">
           <div className="tpl-title">
             <Sparkles size={16} />
-            <span>Prompt Templates</span>
+            <span id="templates-title">Prompt templates</span>
           </div>
-          <button className="modal-close-btn" onClick={onClose}><X size={16} /></button>
+          <button className="modal-close-btn" title="Close templates" onClick={onClose}><X size={16} /></button>
         </div>
 
         <div className="tpl-search-row">
@@ -665,6 +666,7 @@ export default function TemplatesModal({ onClose, onSelect }) {
           <input
             className="tpl-search"
             placeholder="Search templates..."
+            aria-label="Search templates"
             value={search}
             onChange={e => setSearch(e.target.value)}
             autoFocus
@@ -672,6 +674,7 @@ export default function TemplatesModal({ onClose, onSelect }) {
         </div>
 
         <div className="tpl-body">
+          {filtered.length === 0 && <p className="sidebar-status">No templates match “{search}”.</p>}
           {filtered.map((cat, ci) => (
             <div key={ci} className="tpl-category">
               <button

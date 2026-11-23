@@ -1,5 +1,22 @@
 import mongoose from 'mongoose';
 
+const ownerId = { type: mongoose.Schema.Types.ObjectId, required: true, immutable: true };
+
+const sessionSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  ownerId,
+  browser: Boolean,
+  expiresAt: { type: Date, required: true, expires: 0 },
+});
+
+sessionSchema.index({ ownerId: 1 }, { unique: true, partialFilterExpression: { browser: true } });
+
+const rateLimitSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  count: { type: Number, required: true },
+  expiresAt: { type: Date, required: true, expires: 0 },
+});
+
 const messageSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'assistant', 'system'], required: true },
   content: { type: String, required: true },
@@ -8,25 +25,21 @@ const messageSchema = new mongoose.Schema({
 });
 
 const conversationSchema = new mongoose.Schema({
-  userId: { type: String, required: true, index: true },
+  ownerId,
   title: { type: String, default: 'New Chat' },
-  model: { type: String, default: 'llama3.2' },
+  model: { type: String, required: true },
   systemPrompt: { type: String, default: '' },
   messages: [messageSchema],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
   pinned: { type: Boolean, default: false },
   tokenCount: { type: Number, default: 0 },
   folder: { type: String, default: '' },
-});
+  revision: { type: Number, default: 0 },
+}, { timestamps: true });
 
-conversationSchema.pre('save', function (next) {
-  this.updatedAt = new Date();
-  next();
-});
+conversationSchema.index({ ownerId: 1, pinned: -1, updatedAt: -1 });
 
 const personaSchema = new mongoose.Schema({
-  userId: { type: String, required: true, index: true },
+  ownerId,
   name: { type: String, required: true },
   description: { type: String, default: '' },
   systemPrompt: { type: String, required: true },
@@ -34,5 +47,9 @@ const personaSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+personaSchema.index({ ownerId: 1, createdAt: -1 });
+
+export const Session = mongoose.model('Session', sessionSchema);
+export const RateLimit = mongoose.model('RateLimit', rateLimitSchema);
 export const Conversation = mongoose.model('Conversation', conversationSchema);
 export const Persona = mongoose.model('Persona', personaSchema);

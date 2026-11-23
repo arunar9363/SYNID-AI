@@ -1,81 +1,131 @@
-import axios from 'axios';
-
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://synid-ai.onrender.com';
-
-// ── Get or create a unique user ID stored in localStorage ────────────────────
-export function getUserId() {
-  let uid = localStorage.getItem('synid_user_id');
-  if (!uid) {
-    uid = 'user_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-    localStorage.setItem('synid_user_id', uid);
+class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
   }
-  return uid;
 }
 
-const api = axios.create({ baseURL: `${BASE_URL}/api` });
-
-// ── Attach userId to every request automatically ──────────────────────────────
-api.interceptors.request.use(config => {
-  config.headers['x-user-id'] = getUserId();
-  return config;
-});
-
-export const getModels = () => api.get('/models').then(r => r.data);
-export const getConversations = () => api.get('/conversations').then(r => r.data);
-export const getConversation = (id) => api.get(`/conversations/${id}`).then(r => r.data);
-export const createConversation = (model) => api.post('/conversations', { model }).then(r => r.data);
-export const updateConversation = (id, data) => api.patch(`/conversations/${id}`, data).then(r => r.data);
-export const deleteConversation = (id) => api.delete(`/conversations/${id}`).then(r => r.data);
-export const clearAllConversations = () => api.delete('/conversations').then(r => r.data);
-export const pinConversation = (id) => api.patch(`/conversations/${id}/pin`).then(r => r.data);
-export const clearMessages = (id) => api.delete(`/conversations/${id}/messages`).then(r => r.data);
-export const searchConversations = (q) => api.get(`/search?q=${encodeURIComponent(q)}`).then(r => r.data);
-export const exportConversation = (id, format = 'markdown') => {
-  window.open(`${BASE_URL}/api/conversations/${id}/export?format=${format}`, '_blank');
-};
-
-// Personas
-export const getPersonas = () => api.get('/personas').then(r => r.data);
-export const createPersona = (data) => api.post('/personas', data).then(r => r.data);
-export const deletePersona = (id) => api.delete(`/personas/${id}`).then(r => r.data);
-
-// Streaming chat using fetch + SSE
-export async function streamChat({ conversationId, message, model, systemPrompt, images = [], onChunk, onDone, onError, onConversationId, onTitle }) {
+async function request(path, { method = 'GET', body, signal, sessionId } = {}) {
+  const headers = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (sessionId) headers['X-SYNID-Session'] = sessionId;
+  let response;
   try {
-    const response = await fetch(`${BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': getUserId(),
-      },
-      body: JSON.stringify({ conversationId, message, model, systemPrompt, images }),
+    response = await fetch(`/api${path}`, {
+      method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal,
+      credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', redirect: 'error',
     });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error('Could not reach SYNID AI. Try again.');
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(response.status, data?.error || 'The request failed. Try again.');
+  }
+  return response;
+}
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+async function getData(response) {
+  return response.status === 204 ? null : response.json();
+}
 
+let openingSession;
+
+export function openBrowserSession() {
+  if (!openingSession) {
+    const open = async () => {
+      const response = await request('/session', { method: 'POST' });
+      const session = await response.json();
+      if (response.status === 201) {
+        try {
+          await request('/session', { sessionId: session.id });
+        } catch (error) {
+          if (error.status === 401) throw new Error('Allow cookies for SYNID AI to keep your chats private in this browser.');
+          throw error;
+        }
+      }
+      return session;
+    };
+    // Coordinate initial visits from multiple tabs before they share a session cookie.
+    const task = navigator.locks ? navigator.locks.request('synid-browser-session', open) : open();
+    openingSession = task.finally(() => { openingSession = null; });
+  }
+  return openingSession;
+}
+
+async function readChat(response, onChunk) {
+  if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
+    throw new Error('Could not start the reply. Try again.');
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-
+      if (done) throw new Error('The reply ended early. Try again.');
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop();
-
       for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        try {
-          const data = JSON.parse(line.slice(6));
-          if (data.type === 'chunk')           onChunk?.(data.content);
-          if (data.type === 'done')            onDone?.(data);
-          if (data.type === 'error')           onError?.(data.message);
-          if (data.type === 'conversation_id') onConversationId?.(data.id);
-          if (data.type === 'title')           onTitle?.(data.title);
-        } catch { /* skip */ }
+        if (!line.startsWith('data:')) continue;
+        const data = JSON.parse(line.slice(5));
+        if (data.type === 'chunk') onChunk(data.content);
+        if (data.type === 'error') throw new ApiError(data.status, data.message);
+        if (data.type === 'done') return data.conversation;
       }
     }
-  } catch (err) {
-    onError?.(err.message);
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
+}
+
+export function createChatApi(sessionId, onUnauthorized) {
+  async function authenticated(action) {
+    try {
+      return await action();
+    } catch (error) {
+      if (error.status === 401) onUnauthorized(sessionId);
+      throw error;
+    }
+  }
+
+  const send = (path, options) => request(path, { ...options, sessionId });
+  const data = (path, options) => authenticated(() => send(path, options).then(getData));
+  const conversation = id => `/conversations/${encodeURIComponent(id)}`;
+
+  return {
+    getModels: signal => data('/models', { signal }),
+    getConversations: signal => data('/conversations', { signal }),
+    getConversation: (id, signal) => data(conversation(id), { signal }),
+    updateConversation: (id, body) => data(conversation(id), { method: 'PATCH', body }),
+    deleteConversation: id => data(conversation(id), { method: 'DELETE' }),
+    clearAllConversations: () => data('/conversations', { method: 'DELETE' }),
+    pinConversation: id => data(`${conversation(id)}/pin`, { method: 'PATCH' }),
+    clearMessages: id => data(`${conversation(id)}/messages`, { method: 'DELETE' }),
+    searchConversations: (query, signal) => data(`/search?${new URLSearchParams({ q: query })}`, { signal }),
+    getPersonas: signal => data('/personas', { signal }),
+    createPersona: body => data('/personas', { method: 'POST', body }),
+    deletePersona: id => data(`/personas/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    streamChat: (body, signal, onChunk) => authenticated(async () => {
+      const response = await send('/chat', { method: 'POST', body, signal });
+      return readChat(response, onChunk);
+    }),
+    exportConversation: (id, format, signal) => authenticated(async () => {
+      const response = await send(`${conversation(id)}/export?${new URLSearchParams({ format })}`, { signal });
+      const blob = await response.blob();
+      if (signal?.aborted) return;
+      const filename = /filename="([A-Za-z0-9.-]+)"/.exec(response.headers.get('content-disposition') || '')?.[1];
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || `synid-chat.${format === 'json' ? 'json' : 'md'}`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }),
+  };
 }

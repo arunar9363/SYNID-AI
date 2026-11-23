@@ -1,221 +1,77 @@
-import { useState } from 'react';
-import { Search, Download, Sliders, Pin, PinOff, Trash2, MoreHorizontal } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Download, MoreHorizontal, Pin, PinOff, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
-import { exportConversation, pinConversation, clearMessages } from '../utils/api';
 import SettingsModal from './SettingsModal';
 import SearchModal from './SearchModal';
 
-export default function TopBar({ systemPrompt, setSystemPrompt }) {
-  const { activeId, conversations, selectConversation, messages, streaming, sidebarOpen } = useChat();
-  const [showSettings, setShowSettings] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+export default function TopBar() {
+  const {
+    activeId, conversations, selectConversation, messages, streaming, loadingChat, sidebarOpen,
+    systemPrompt, togglePin, clearMessages, exportConversation,
+  } = useChat();
+  const [modal, setModal] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
-  const [pinned, setPinned] = useState(false);
+  const active = conversations.find(conversation => conversation._id === activeId);
+  const estimatedTokens = messages.reduce((sum, message) => sum + Math.ceil(message.content.length / 4), 0);
 
-  const activeConvo = conversations.find(c => c._id === activeId);
-
-  // Rough token estimate: ~4 chars per token
-  const estimatedTokens = messages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0);
-
-  const handlePin = async () => {
-    if (!activeId) return;
-    const r = await pinConversation(activeId);
-    setPinned(r.pinned);
-  };
-
-  const handleClearMessages = async () => {
-    if (!activeId || !confirm('Clear all messages in this chat?')) return;
-    await clearMessages(activeId);
-    window.location.reload();
-  };
-
-  // Keyboard shortcut: Ctrl+K for search
-  useState(() => {
-    const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setShowSearch(true);
+  useEffect(() => {
+    const handler = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setModal('search');
+      }
+      if (event.key === 'Escape') {
+        setModal(null);
+        setShowMenu(false);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, []);
+
+  useEffect(() => setShowMenu(false), [activeId]);
+
+  function menuAction(action) {
+    setShowMenu(false);
+    action();
+  }
 
   return (
     <>
-      <div className="topbar" style={{ paddingLeft: sidebarOpen ? '20px' : '64px' }}>
-        <div className="topbar-left">
-          {activeConvo && (
-            <div className="chat-title-display">
-              <span className="chat-title-text">{activeConvo.title}</span>
-              <span className="model-chip">{activeConvo.model}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="topbar-right">
-          {/* Token counter — hidden on mobile to keep buttons visible */}
-          {messages.length > 0 && (
-            <div className="token-badge token-badge-desktop" title="Estimated tokens in context">
-              ~{estimatedTokens.toLocaleString()} tokens
-            </div>
-          )}
-
-          {/* Streaming indicator — short label on mobile */}
-          {streaming && (
-            <div className="gen-badge">
-              <span className="gen-dot" />
-              <span className="gen-label">Generating</span>
-            </div>
-          )}
-
-          {/* Search */}
-          <button className="topbar-btn" onClick={() => setShowSearch(true)} title="Search (Ctrl+K)">
-            <Search size={15} />
+      <header className={`topbar${sidebarOpen ? '' : ' with-sidebar-toggle'}`}>
+        <span className="topbar-title" title={active?.title}>{active?.title || 'New chat'}</span>
+        <div className="topbar-actions">
+          {streaming ? <span className="generation-status" role="status"><span />Generating</span>
+            : estimatedTokens > 0 && <span className="token-counter" title="Estimated message tokens">~{estimatedTokens.toLocaleString()} tokens</span>}
+          <button className="icon-button" onClick={() => setModal('search')} title="Search chats (Ctrl+K)"><Search size={18} /></button>
+          <button className="icon-button settings-button" onClick={() => setModal('settings')} title="Chat settings" disabled={streaming || loadingChat}>
+            <SlidersHorizontal size={18} />{systemPrompt && <span className="settings-dot" />}
           </button>
-
-          {/* Settings */}
-          <button className="topbar-btn" onClick={() => setShowSettings(true)} title="Settings & Personas">
-            <Sliders size={15} />
-            {systemPrompt && <span className="active-dot" />}
-          </button>
-
-          {/* More menu */}
-          {activeId && (
-            <div className="relative">
-              <button className="topbar-btn" onClick={() => setShowMenu(m => !m)} title="More options">
-                <MoreHorizontal size={15} />
-              </button>
+          {activeId && !loadingChat && (
+            <div className="chat-menu">
+              <button className="icon-button" onClick={() => setShowMenu(value => !value)}
+                aria-expanded={showMenu} title="Conversation actions"><MoreHorizontal size={19} /></button>
               {showMenu && (
-                <div className="dropdown-menu" onMouseLeave={() => setShowMenu(false)}>
-                  <div className="menu-divider" />
-                  <button onClick={() => { handlePin(); setShowMenu(false); }}>
-                    {activeConvo?.pinned ? <PinOff size={13} /> : <Pin size={13} />}
-                    {activeConvo?.pinned ? 'Unpin' : 'Pin'} Chat
-                  </button>
-                  <button className="danger" onClick={() => { handleClearMessages(); setShowMenu(false); }}>
-                    <Trash2 size={13} />Clear Messages
-                  </button>
-                </div>
+                <>
+                  <button className="menu-backdrop" tabIndex={-1} aria-label="Close actions" onClick={() => setShowMenu(false)} />
+                  <div className="actions-popover">
+                    <button onClick={() => menuAction(() => togglePin(activeId))}>
+                      {active?.pinned ? <PinOff size={15} /> : <Pin size={15} />}{active?.pinned ? 'Unpin chat' : 'Pin chat'}
+                    </button>
+                    <button onClick={() => menuAction(() => exportConversation(activeId, 'markdown'))}><Download size={15} />Download Markdown</button>
+                    <button onClick={() => menuAction(() => exportConversation(activeId, 'json'))}><Download size={15} />Download JSON</button>
+                    <button className="danger" onClick={() => menuAction(() => {
+                      if (window.confirm('Clear all messages in this chat?')) clearMessages(activeId);
+                    })}><Trash2 size={15} />Clear messages</button>
+                  </div>
+                </>
               )}
             </div>
           )}
         </div>
-      </div>
-
-      {showSettings && (
-        <SettingsModal
-          onClose={() => setShowSettings(false)}
-          systemPrompt={systemPrompt}
-          setSystemPrompt={setSystemPrompt}
-        />
-      )}
-      {showSearch && (
-        <SearchModal
-          onClose={() => setShowSearch(false)}
-          onSelect={selectConversation}
-        />
-      )}
-
-      <style>{`
-        .topbar {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 0 20px;
-          height: 52px;
-          border-bottom: 1px solid var(--border-subtle);
-          background: var(--bg-base);
-          flex-shrink: 0;
-          position: relative; z-index: 10;
-        }
-        .topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; overflow: hidden; }
-        .chat-title-display { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
-        .chat-title-text {
-          font-size: 14px; font-weight: 600; color: var(--text-primary);
-          letter-spacing: -0.2px;
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-
-        .topbar-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-        .token-badge {
-          font-size: 11px; color: var(--text-muted);
-          background: var(--bg-elevated);
-          border: 1px solid var(--border-subtle);
-          border-radius: 5px; padding: 2px 8px;
-          font-family: var(--font-mono);
-          white-space: nowrap;
-        }
-        .gen-badge {
-          display: flex; align-items: center; gap: 6px;
-          font-size: 11px; color: var(--accent);
-          background: var(--accent-dim); border: 1px solid var(--accent-glow);
-          border-radius: 5px; padding: 3px 9px;
-        }
-        .gen-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: var(--accent); animation: pulse 1s infinite;
-          flex-shrink: 0;
-        }
-
-        .topbar-btn {
-          position: relative;
-          width: 32px; height: 32px; border-radius: 8px;
-          background: none; border: none; cursor: pointer;
-          color: var(--text-muted); display: flex; align-items: center; justify-content: center;
-          transition: all var(--transition);
-          flex-shrink: 0;
-        }
-        .topbar-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
-        .active-dot {
-          position: absolute; top: 5px; right: 5px;
-          width: 6px; height: 6px; border-radius: 50%;
-          background: var(--accent);
-        }
-
-        .relative { position: relative; }
-        .dropdown-menu {
-          position: absolute; right: 0; top: calc(100% + 6px);
-          background: var(--bg-elevated);
-          border: 1px solid var(--border);
-          border-radius: 10px; padding: 5px;
-          min-width: 180px; z-index: 50;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-          animation: fadeUp 0.12s ease;
-        }
-        .dropdown-menu button {
-          display: flex; align-items: center; gap: 8px;
-          padding: 8px 10px; width: 100%; border: none;
-          background: none; cursor: pointer; border-radius: 6px;
-          color: var(--text-secondary); font-family: var(--font-sans);
-          font-size: 13px; transition: all var(--transition);
-          text-align: left;
-        }
-        .dropdown-menu button:hover { background: var(--bg-hover); color: var(--text-primary); }
-        .dropdown-menu button.danger:hover { color: var(--danger); }
-        .menu-divider { height: 1px; background: var(--border-subtle); margin: 4px 0; }
-
-        /* Mobile fixes */
-        @media (max-width: 640px) {
-          .topbar {
-            padding: 0 12px !important;
-          }
-          .token-badge-desktop {
-            display: none;
-          }
-          .gen-label {
-            display: none;
-          }
-          .gen-badge {
-            padding: 3px 6px;
-          }
-          .chat-title-text {
-            font-size: 13px;
-            max-width: 120px;
-          }
-          .model-chip {
-            display: none;
-          }
-        }
-      `}</style>
+      </header>
+      {modal === 'settings' && <SettingsModal key={activeId || 'new'} onClose={() => setModal(null)} />}
+      {modal === 'search' && <SearchModal onClose={() => setModal(null)} onSelect={selectConversation} />}
     </>
   );
 }

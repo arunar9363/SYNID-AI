@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, Bot, Sliders, Cpu } from 'lucide-react';
-import * as api from '../utils/api';
+import { X, Plus, Trash2, Save, Bot, Sliders } from 'lucide-react';
+import { useChat } from '../context/ChatContext';
 
 const DEFAULT_PERSONAS = [
   {
@@ -206,49 +206,73 @@ Your goal: Make them so prepared that the real interview feels easy.`
   },
 ];
 
-export default function SettingsModal({ onClose, systemPrompt, setSystemPrompt }) {
+const emptyPersona = { icon: '🤖', name: '', description: '', systemPrompt: '' };
+
+export default function SettingsModal({ onClose }) {
+  const { api, systemPrompt, saveSystemPrompt } = useChat();
   const [tab, setTab] = useState('persona');
   const [personas, setPersonas] = useState([]);
-  const [newPersona, setNewPersona] = useState({ icon: '🤖', name: '', description: '', systemPrompt: '' });
-  const [localPrompt, setLocalPrompt] = useState(systemPrompt || '');
+  const [newPersona, setNewPersona] = useState(emptyPersona);
+  const [localPrompt, setLocalPrompt] = useState(systemPrompt);
   const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    api.getPersonas().then(setPersonas).catch(() => {});
-  }, []);
+    const controller = new AbortController();
+    api.getPersonas(controller.signal).then(items => {
+      if (!controller.signal.aborted) setPersonas(existing => [...existing, ...items.filter(item =>
+        !existing.some(persona => persona._id === item._id))]);
+    }).catch(failure => {
+      if (!controller.signal.aborted) setError(failure.message);
+    });
+    return () => controller.abort();
+  }, [api]);
 
   const applyPersona = (p) => {
     setLocalPrompt(p.systemPrompt);
+    setSaved(false);
     setTab('prompt');
   };
 
-  const savePersona = async () => {
-    if (!newPersona.name || !newPersona.systemPrompt) return;
-    const p = await api.createPersona(newPersona);
-    setPersonas(prev => [p, ...prev]);
-    setNewPersona({ icon: '🤖', name: '', description: '', systemPrompt: '' });
+  const perform = async (work) => {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try { await work(); }
+    catch (failure) { setError(failure.message); }
+    finally { setBusy(false); }
   };
 
-  const removePersona = async (id) => {
+  const savePersona = (event) => {
+    event.preventDefault();
+    if (!newPersona.name.trim() || !newPersona.systemPrompt.trim()) return;
+    perform(async () => {
+      const persona = await api.createPersona({ ...newPersona, icon: newPersona.icon.trim() || '🤖' });
+      setPersonas(items => [persona, ...items.filter(item => item._id !== persona._id)]);
+      setNewPersona(emptyPersona);
+    });
+  };
+
+  const removePersona = (id) => perform(async () => {
     await api.deletePersona(id);
     setPersonas(prev => prev.filter(p => p._id !== id));
-  };
+  });
 
-  const savePrompt = () => {
-    setSystemPrompt(localPrompt);
+  const savePrompt = () => perform(async () => {
+    await saveSystemPrompt(localPrompt.trim());
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
             <Sliders size={16} />
-            <span>Settings</span>
+            <span id="settings-title">Chat settings</span>
           </div>
-          <button className="modal-close" onClick={onClose}><X size={16} /></button>
+          <button className="modal-close" onClick={onClose} title="Close settings" autoFocus><X size={16} /></button>
         </div>
 
         <div className="modal-tabs">
@@ -267,13 +291,12 @@ export default function SettingsModal({ onClose, systemPrompt, setSystemPrompt }
         </div>
 
         <div className="modal-body">
+          {error && <p role="alert" className="form-error modal-error">{error}</p>}
           {tab === 'persona' && (
             <div className="persona-tab">
-              <p className="tab-desc">Choose a persona to set the AI's behavior and personality.</p>
-
               <div className="personas-grid">
-                {DEFAULT_PERSONAS.map((p, i) => (
-                  <button key={i} className="persona-card" onClick={() => applyPersona(p)}>
+                {DEFAULT_PERSONAS.map(p => (
+                  <button key={p.name} className="persona-card" onClick={() => applyPersona(p)}>
                     <span className="persona-icon">{p.icon}</span>
                     <div>
                       <div className="persona-name">{p.name}</div>
@@ -283,75 +306,65 @@ export default function SettingsModal({ onClose, systemPrompt, setSystemPrompt }
                 ))}
                 {personas.map(p => (
                   <div key={p._id} className="persona-card custom">
-                    <span className="persona-icon">{p.icon}</span>
-                    <div style={{ flex: 1 }} onClick={() => applyPersona(p)}>
-                      <div className="persona-name">{p.name}</div>
-                      <div className="persona-desc">{p.description || 'Custom'}</div>
-                    </div>
-                    <button className="persona-del" onClick={() => removePersona(p._id)}>
+                    <button className="persona-select" onClick={() => applyPersona(p)}>
+                      <span className="persona-icon">{p.icon}</span>
+                      <span><span className="persona-name">{p.name}</span>
+                        <span className="persona-desc">{p.description || 'Custom'}</span></span>
+                    </button>
+                    <button className="persona-del" title={`Delete ${p.name}`} onClick={() => removePersona(p._id)} disabled={busy}>
                       <Trash2 size={12} />
                     </button>
                   </div>
                 ))}
               </div>
 
-              <div className="divider">Create Custom Persona</div>
-              <div className="create-persona">
+              <div className="divider">Create a persona</div>
+              <form className="create-persona" onSubmit={savePersona}>
                 <div className="create-row">
-                  <input className="field small" placeholder="Icon" value={newPersona.icon}
+                  <input className="field small" placeholder="Icon" aria-label="Persona icon" value={newPersona.icon} maxLength={16}
                     onChange={e => setNewPersona(p => ({ ...p, icon: e.target.value }))} style={{ width: 60 }} />
-                  <input className="field" placeholder="Name (e.g. Python Expert)"
+                  <input className="field" placeholder="Persona name" aria-label="Persona name" maxLength={60} required
                     value={newPersona.name} onChange={e => setNewPersona(p => ({ ...p, name: e.target.value }))} />
                 </div>
-                <textarea className="field" rows={3} placeholder="System prompt for this persona..."
+                <input className="field" aria-label="Persona description" placeholder="Description (optional)" maxLength={240}
+                  value={newPersona.description} onChange={e => setNewPersona(p => ({ ...p, description: e.target.value }))} />
+                <textarea className="field" rows={3} placeholder="Instructions for this persona" aria-label="Persona instructions" maxLength={4000} required
                   value={newPersona.systemPrompt}
                   onChange={e => setNewPersona(p => ({ ...p, systemPrompt: e.target.value }))} />
-                <button className="btn-accent" onClick={savePersona}>
-                  <Plus size={13} />Save Persona
+                <button className="btn-accent" disabled={busy}>
+                  <Plus size={13} />Save persona
                 </button>
-              </div>
+              </form>
             </div>
           )}
 
           {tab === 'prompt' && (
             <div className="prompt-tab">
               <p className="tab-desc">
-                Set a system prompt that shapes how the AI responds in all messages.
-                Leave empty for default behavior.
+                These instructions apply to this conversation. Leave the field empty to use the defaults.
               </p>
               <textarea
                 className="field prompt-field"
                 rows={10}
-                placeholder="Example: You are a helpful assistant that always responds in bullet points and keeps answers under 3 sentences..."
+                aria-label="System prompt"
+                placeholder="How should SYNID AI respond in this chat?"
+                maxLength={4000}
                 value={localPrompt}
-                onChange={e => setLocalPrompt(e.target.value)}
+                onChange={e => { setLocalPrompt(e.target.value); setSaved(false); }}
               />
               <div className="prompt-actions">
-                <button className="btn-ghost" onClick={() => setLocalPrompt('')}>Clear</button>
-                <button className="btn-accent" onClick={savePrompt}>
+                <button className="btn-ghost" onClick={() => { setLocalPrompt(''); setSaved(false); }}>Clear</button>
+                <button className="btn-accent" disabled={busy} onClick={savePrompt}>
                   <Save size={13} />
-                  {saved ? 'Saved!' : 'Apply Prompt'}
+                  {saved ? 'Saved' : 'Save instructions'}
                 </button>
               </div>
-              {localPrompt && (
-                <div className="prompt-preview">
-                  <span className="preview-label">Active prompt:</span>
-                  <span className="preview-text">{localPrompt.slice(0, 120)}{localPrompt.length > 120 ? '…' : ''}</span>
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
 
       <style>{`
-        .modal-overlay {
-          position: fixed; inset: 0; z-index: 100;
-          background: rgba(0,0,0,0.7);
-          display: flex; align-items: center; justify-content: center;
-          backdrop-filter: blur(4px);
-          animation: fadeIn 0.15s ease;
-        }
         .modal {
           background: var(--bg-surface);
           border: 1px solid var(--border);
@@ -405,7 +418,6 @@ export default function SettingsModal({ onClose, systemPrompt, setSystemPrompt }
           transition: all var(--transition);
         }
         .persona-card:hover { border-color: var(--accent); background: var(--bg-hover); }
-        .persona-card.custom { }
         .persona-icon { font-size: 20px; flex-shrink: 0; }
         .persona-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
         .persona-desc { font-size: 11px; color: var(--text-muted); }
@@ -441,18 +453,11 @@ export default function SettingsModal({ onClose, systemPrompt, setSystemPrompt }
         .prompt-tab { display: flex; flex-direction: column; gap: 10px; }
         .prompt-field { min-height: 180px; }
         .prompt-actions { display: flex; gap: 8px; justify-content: flex-end; }
-        .prompt-preview {
-          background: var(--bg-elevated); border: 1px solid var(--border);
-          border-radius: 8px; padding: 10px 12px;
-          font-size: 12px;
-        }
-        .preview-label { font-weight: 600; color: var(--accent); margin-right: 6px; }
-        .preview-text { color: var(--text-muted); font-style: italic; }
 
         .btn-accent {
           display: flex; align-items: center; gap: 6px;
           padding: 8px 16px; border-radius: 8px;
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--accent-ink);
           border: none; cursor: pointer;
           font-family: var(--font-sans); font-size: 13px; font-weight: 500;
           transition: all var(--transition);
