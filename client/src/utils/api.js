@@ -30,13 +30,24 @@ async function getData(response) {
   return response.status === 204 ? null : response.json();
 }
 
+async function readSession(response) {
+  const session = await response.json().catch(() => null);
+  return typeof session?.id === 'string' && session.id.trim() ? session : null;
+}
+
 let openingSession;
 
 export function openBrowserSession() {
   if (!openingSession) {
     const open = async () => {
       const response = await request('/session', { method: 'POST' });
-      const session = await response.json();
+      const session = await readSession(response);
+      if (!session) {
+        // The browser may have stored the session cookie before the response body was lost.
+        const recovered = await request('/session').then(readSession).catch(() => null);
+        if (recovered) return recovered;
+        throw new Error('SYNID AI could not open a browser session. Check the site address and try again.');
+      }
       if (response.status === 201) {
         try {
           await request('/session', { sessionId: session.id });
