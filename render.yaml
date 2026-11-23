@@ -2,11 +2,11 @@
 # The synid-ai web service must run the session API with APP_ORIGIN=https://synidai.onrender.com.
 services:
   - type: web
-    name: synidai
+    name: SYNIDAI
     runtime: static
     rootDir: client
-    buildCommand: npm ci --include=dev && npm run build
-    staticPublishPath: ./dist
+    buildCommand: npm install --include=dev && npm run build
+    staticPublishPath: dist
     routes:
       - type: rewrite
         source: /api/*
